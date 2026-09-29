@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net"
@@ -25,9 +26,16 @@ import (
 	"github.com/noroadzh/gat1400-simulator/internal/adapter/wire"
 	"github.com/noroadzh/gat1400-simulator/internal/app/application"
 	"github.com/noroadzh/gat1400-simulator/internal/app/config"
+	"github.com/noroadzh/gat1400-simulator/internal/app/logging"
 	"github.com/noroadzh/gat1400-simulator/internal/app/ports"
 	"github.com/noroadzh/gat1400-simulator/internal/domain/ids"
 	"github.com/noroadzh/gat1400-simulator/internal/ui"
+)
+
+var (
+	// profile 默认值固定为 "info"，与项目旧行为一致；显式 --profile=prod 才会
+	// 升级到 warn（生产 BUG 日志），--profile=test 才会下放到 debug。
+	profileFlag = flag.String("profile", "info", "运行时环境：prod|dev|test|info|warn|debug（决定默认日志级别）")
 )
 
 func main() {
@@ -45,48 +53,84 @@ func main() {
 		os.Exit(0)
 	}
 
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
+	flag.Parse()
+
+	ready, err := run(*profileFlag)
+	if err != nil {
+		emitFatal(ready, err, *profileFlag)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	slog.SetDefault(logger)
+// emitFatal 把启动阶段的致命错误统一处理：
+//   - ready=true：根 logger 可用，写 event=startup_failure；
+//   - ready=false：根 logger 不可用，走 stderr 兜底。
+//
+// 抽出来便于测试断言 event 字段，也避免 main() 与 run() 双写同一错误。
+func emitFatal(ready bool, err error, profile string) {
+	if ready {
+		slog.Default().Error("startup_failure",
+			slog.String("event", "startup_failure"),
+			slog.String("error", err.Error()),
+			slog.String("profile", profile),
+		)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
+}
 
-	rootCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-
+// run 引导应用容器并在失败时返回原因。
+//
+// 返回值 ready 表示根 logger 是否已可用（配置加载 + logger 构造均成功）：
+//   - ready == false：调用方必须走 stderr 兜底，用户至少能看到错误原因。
+//   - ready == true：调用方应把错误以 event=startup_failure 写入根 logger。
+//
+// 该状态由 run() 自身返回值携带，不使用包级可变状态，避免跨函数读写。
+func run(profile string) (ready bool, err error) {
 	cfg, err := config.Load(
 		"configs/default.yaml",
 		os.Getenv("GAT1400_CONFIG"),
 		"configs/local.yaml",
 	)
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+		// 配置加载失败时 logger 尚未初始化，调用方走 stderr 兜底。
+		return false, fmt.Errorf("load config: %w", err)
 	}
+
+	rootLogger, closer, err := logging.New(&cfg.Log, profile)
+	if err != nil {
+		// logger 构造失败，调用方仍走 stderr 兜底。
+		return false, fmt.Errorf("init logger: %w", err)
+	}
+	defer func() { _ = closer() }()
+
+	// logging.New already calls slog.SetDefault internally so legacy
+	// slog.Default() call sites (e.g. internal/ui/ws.go) share the same root.
+	// 此处 ready=true 意味着后续失败可由调用方统一落 event=startup_failure。
+
+	rootCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
 	captureStore, err := storage.NewCaptureStore(rootCtx, cfg.Storage.Path)
 	if err != nil {
-		return fmt.Errorf("open capture store: %w", err)
+		return true, fmt.Errorf("open capture store: %w", err)
 	}
 	defer captureStore.Close()
 
 	nonceStore, err := storage.NewNonceStore(rootCtx, cfg.Storage.Path)
 	if err != nil {
-		return fmt.Errorf("open nonce store: %w", err)
+		return true, fmt.Errorf("open nonce store: %w", err)
 	}
 	defer nonceStore.Close()
 
 	captureReader, err := storage.NewCaptureReader(cfg.Storage.Path)
 	if err != nil {
-		return fmt.Errorf("open capture reader: %w", err)
+		return true, fmt.Errorf("open capture reader: %w", err)
 	}
 
-	recorder := capture.NewRecorder(captureStore, logger)
+	recorder := capture.NewRecorder(captureStore, rootLogger)
 	idGen := ids.NewGenerator(uint32(cfg.Node.SiteCode), uint32(cfg.Node.IndustryCode))
-	wireClient := wire.NewClient(logger, nonceStore)
+	wireClient := wire.NewClient(rootLogger, nonceStore)
 	wireClient.Configure(wire.Options{
 		Username: cfg.Auth.Username,
 		Password: cfg.Auth.Password,
@@ -95,10 +139,10 @@ func run() error {
 		Timeout:  10 * time.Second,
 	})
 
-	nodeSvc := application.NewNodeService(logger, idGen)
+	nodeSvc := application.NewNodeService(rootLogger, idGen)
 	factory := scenarioadapter.NewFactory(idGen, cfg.ScenarioSeed)
-	dispatcher := scenarioadapter.NewOutboundDispatcher(wireClient, logger, recorder)
-	engine := scenarioadapter.NewEngine(logger, factory, dispatcher, recorder, nodeSvc)
+	dispatcher := scenarioadapter.NewOutboundDispatcher(wireClient, rootLogger, recorder)
+	engine := scenarioadapter.NewEngine(rootLogger, factory, dispatcher, recorder, nodeSvc)
 	engine.SetKeepaliveInterval(cfg.KeepaliveInterval)
 
 	// The HTTP registry installs a sync hook on nodeSvc so that every node
@@ -111,7 +155,7 @@ func run() error {
 		return nodeRegistry.Sync(ctx)
 	})
 
-	scenarioSvc := application.NewScenarioService(logger, engine)
+	scenarioSvc := application.NewScenarioService(rootLogger, engine)
 
 	// Load scenarios from disk. Auto-start happens AFTER the node registry is
 	// wired so that the engine's materialisation can trigger listener setup.
@@ -119,26 +163,26 @@ func run() error {
 		loader := scenarioadapter.NewLoader()
 		loaded, lerrs := loader.LoadDir(cfg.ScenariosDir)
 		for _, e := range lerrs {
-			logger.Warn("scenario load error", slog.String("error", e.Error()))
+			rootLogger.Warn("scenario load error", slog.String("error", e.Error()))
 		}
 		scenarioSvc.LoadAll(loaded)
-		logger.Info("scenarios loaded",
+		rootLogger.Info("scenarios loaded",
 			slog.String("dir", cfg.ScenariosDir),
 			slog.Int("count", len(loaded)),
 			slog.Int("errors", len(lerrs)),
 		)
 	}
 
-	apiServer := httpapi.NewServer(logger, nodeSvc, scenarioSvc, recorder, nonceStore, idGen, httpapiConfig(cfg))
-	nodeRegistry = httpapi.NewNodeRegistry(logger, nodeSvc, scenarioSvc, recorder, nonceStore, idGen, httpapiConfig(cfg))
-	bffServer := ui.NewServer(logger, nodeSvc, scenarioSvc, recorder, captureReader, uiConfig(cfg))
+	apiServer := httpapi.NewServer(rootLogger, nodeSvc, scenarioSvc, recorder, nonceStore, idGen, httpapiConfig(cfg))
+	nodeRegistry = httpapi.NewNodeRegistry(rootLogger, nodeSvc, scenarioSvc, recorder, nonceStore, idGen, httpapiConfig(cfg))
+	bffServer := ui.NewServer(rootLogger, nodeSvc, scenarioSvc, recorder, captureReader, uiConfig(cfg))
 
 	// Auto-start all scenarios that declared Schedule.AutoStart=true.
 	// ScenarioService.AutoStart filters internally; each selected scenario gets
 	// ScenarioService.Start → Engine.AutoStart → Engine.Start.
 	if errs := scenarioSvc.AutoStart(rootCtx); len(errs) > 0 {
 		for _, err := range errs {
-			logger.Warn("auto-start failed", slog.String("error", err.Error()))
+			rootLogger.Warn("auto-start failed", slog.String("error", err.Error()))
 		}
 	}
 
@@ -154,10 +198,11 @@ func run() error {
 		}
 	}()
 
-	logger.Info("gat1400-simulator started",
+	rootLogger.Info("gat1400-simulator started",
 		slog.String("protocol_addr", cfg.Protocol.Listen),
 		slog.String("control_addr", cfg.Control.Listen),
 		slog.String("scenarios_dir", cfg.ScenariosDir),
+		slog.String("profile", profile),
 	)
 
 	// Stop any running scenarios on shutdown.
@@ -169,10 +214,16 @@ func run() error {
 
 	select {
 	case <-rootCtx.Done():
-		logger.Info("shutdown signal received")
+		rootLogger.Info("shutdown signal received")
 	case err := <-errCh:
 		cancel()
-		return err
+		// server 失败属于 startup 之后才发生的运行时错误，单独记一条 event=server_error
+		// 让运维能区分「启动阶段失败」与「启动后崩溃」。
+		rootLogger.Error("server error",
+			slog.String("event", "server_error"),
+			slog.String("error", err.Error()),
+		)
+		return true, err
 	}
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
@@ -183,8 +234,8 @@ func run() error {
 		_ = nodeRegistry.Shutdown(shutdownCtx)
 	}
 
-	logger.Info("gat1400-simulator stopped")
-	return nil
+	rootLogger.Info("gat1400-simulator stopped")
+	return true, nil
 }
 
 // Compile-time assertions：编译期验证 application 包实现了 ports 接口。
@@ -232,4 +283,3 @@ func protocolBaseURL(listen string) string {
 	}
 	return "http://" + addr + ":14000"
 }
-

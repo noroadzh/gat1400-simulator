@@ -7,6 +7,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/labstack/echo/v4 v4.13.3
 	golang.org/x/sync v0.11.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.34.5
 )

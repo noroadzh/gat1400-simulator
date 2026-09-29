@@ -51,7 +51,8 @@ func NewServer(l *slog.Logger, nodeSvc *application.NodeService, scenarioSvc *ap
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	hub := newHub()
+	e.Use(TraceMiddleware(l))
+	hub := newHub(l)
 	protocolBase := ""
 	if cfg != nil {
 		protocolBase = cfg.Protocol.BaseURL

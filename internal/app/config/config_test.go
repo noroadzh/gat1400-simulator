@@ -119,3 +119,69 @@ func TestLoad_MultipleFilesLastWins(t *testing.T) {
 		t.Errorf("Protocol.Listen = %s, want :2222", c.Protocol.Listen)
 	}
 }
+
+func TestLoad_LogConfigFields(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "logcfg.yaml")
+	content := []byte(`
+log:
+  level: debug
+  format: text
+  stdout: false
+  file: "./logs/test.log"
+  rotation: daily
+  maxSizeMB: 50
+  maxBackups: 3
+  maxAgeDays: 7
+  compress: false
+`)
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	c, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load(): %v", err)
+	}
+	l := c.Log
+	if l.Level != "debug" {
+		t.Errorf("Level = %q, want debug", l.Level)
+	}
+	if l.Format != "text" {
+		t.Errorf("Format = %q, want text", l.Format)
+	}
+	if l.Stdout {
+		t.Errorf("Stdout = true, want false")
+	}
+	if l.File != "./logs/test.log" {
+		t.Errorf("File = %q, want ./logs/test.log", l.File)
+	}
+	if l.Rotation != "daily" {
+		t.Errorf("Rotation = %q, want daily", l.Rotation)
+	}
+	if l.MaxSizeMB != 50 {
+		t.Errorf("MaxSizeMB = %d, want 50", l.MaxSizeMB)
+	}
+	if l.MaxBackups != 3 {
+		t.Errorf("MaxBackups = %d, want 3", l.MaxBackups)
+	}
+	if l.MaxAgeDays != 7 {
+		t.Errorf("MaxAgeDays = %d, want 7", l.MaxAgeDays)
+	}
+	if l.Compress {
+		t.Errorf("Compress = true, want false")
+	}
+}
+
+func TestLoad_LogConfigDefaultsUnchanged(t *testing.T) {
+	c, err := Load(filepath.Join(t.TempDir(), "nope-doesnt-exist.yaml"))
+	if err != nil {
+		t.Fatalf("Load() with missing file should fall back to defaults, got: %v", err)
+	}
+	d := Default().Log
+	l := c.Log
+	if l.Level != d.Level || l.Format != d.Format || l.Stdout != d.Stdout ||
+		l.File != d.File || l.Rotation != d.Rotation || l.MaxSizeMB != d.MaxSizeMB ||
+		l.MaxBackups != d.MaxBackups || l.MaxAgeDays != d.MaxAgeDays || l.Compress != d.Compress {
+		t.Errorf("LogConfig defaults drifted: got %+v, want %+v", l, d)
+	}
+}

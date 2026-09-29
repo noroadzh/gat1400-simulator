@@ -56,6 +56,9 @@ type Options struct {
 //
 // 两种行为对调用方透明。
 func NewClient(log *slog.Logger, nonce *storage.NonceStore) *Client {
+	if log == nil {
+		log = slog.Default()
+	}
 	return &Client{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		log:        log,

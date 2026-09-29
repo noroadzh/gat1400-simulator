@@ -70,8 +70,10 @@ func (s *NodeService) UpsertNode(_ context.Context, n node.Node) (*node.Node, er
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now().UTC()
+	isNew := true
 	if existing, ok := s.items[n.ID]; ok {
 		n.CreatedAt = existing.CreatedAt
+		isNew = false
 	} else {
 		n.CreatedAt = now
 	}
@@ -81,6 +83,16 @@ func (s *NodeService) UpsertNode(_ context.Context, n node.Node) (*node.Node, er
 	}
 	cp := n
 	s.items[n.ID] = &cp
+	event := "node_create"
+	if !isNew {
+		event = "node_update"
+	}
+	s.log.Info("node upserted",
+		slog.String("event", event),
+		slog.String("node_id", cp.ID),
+		slog.String("role", string(cp.Role)),
+		slog.String("status", string(cp.Status)),
+	)
 	return &cp, nil
 }
 
@@ -88,7 +100,14 @@ func (s *NodeService) UpsertNode(_ context.Context, n node.Node) (*node.Node, er
 func (s *NodeService) RemoveNode(_ context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, ok := s.items[id]; !ok {
+		return nil
+	}
 	delete(s.items, id)
+	s.log.Info("node removed",
+		slog.String("event", "node_remove"),
+		slog.String("node_id", id),
+	)
 	return nil
 }
 
@@ -107,6 +126,10 @@ func (s *NodeService) MarkSeen(_ context.Context, id string) error {
 	n.LastSeenAt = now
 	n.Status = node.StatusOnline
 	n.UpdatedAt = now
+	s.log.Debug("node mark_seen",
+		slog.String("event", "node_seen"),
+		slog.String("node_id", id),
+	)
 	return nil
 }
 
@@ -249,9 +272,17 @@ func (s *ScenarioService) Start(ctx context.Context, id string) error {
 		s.mu.Lock()
 		delete(s.running, id)
 		s.mu.Unlock()
+		s.log.Error("scenario start failed",
+			slog.String("event", "scenario_start"),
+			slog.String("scenario_id", id),
+			slog.String("error", err.Error()),
+		)
 		return err
 	}
-	s.log.Info("scenario started", slog.String("id", id))
+	s.log.Info("scenario started",
+		slog.String("event", "scenario_start"),
+		slog.String("scenario_id", id),
+	)
 	return nil
 }
 
@@ -269,7 +300,10 @@ func (s *ScenarioService) Stop(_ context.Context, id string) error {
 	if s.engine != nil {
 		_ = s.engine.Stop(id)
 	}
-	s.log.Info("scenario stopped", slog.String("id", id))
+	s.log.Info("scenario stopped",
+		slog.String("event", "scenario_stop"),
+		slog.String("scenario_id", id),
+	)
 	return nil
 }
 

@@ -3,6 +3,7 @@ package wire
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -55,11 +56,28 @@ func (s *System) Register(ctx context.Context, baseURL string, obj RegisterObjec
 	}
 	_, statusCode, err := s.c.PostJSON(ctx, path, obj.DeviceID, body)
 	if err != nil {
+		s.c.log.Warn("sip register failed",
+			slog.String("event", "sip_register"),
+			slog.String("node_id", obj.DeviceID),
+			slog.Int("status_code", statusCode),
+			slog.String("reason", err.Error()),
+		)
 		return fmt.Errorf("Register: %w", err)
 	}
 	if statusCode != http.StatusOK {
+		s.c.log.Warn("sip register failed",
+			slog.String("event", "sip_register"),
+			slog.String("node_id", obj.DeviceID),
+			slog.Int("status_code", statusCode),
+			slog.String("reason", "unexpected status"),
+		)
 		return fmt.Errorf("Register: unexpected status %d", statusCode)
 	}
+	s.c.log.Info("sip register ok",
+		slog.String("event", "sip_register"),
+		slog.String("node_id", obj.DeviceID),
+		slog.Int("status_code", statusCode),
+	)
 	return nil
 }
 
@@ -73,11 +91,28 @@ func (s *System) UnRegister(ctx context.Context, baseURL, deviceID string) error
 	}
 	_, statusCode, err := s.c.PostJSON(ctx, path, deviceID, body)
 	if err != nil {
+		s.c.log.Warn("sip unregister failed",
+			slog.String("event", "sip_unregister"),
+			slog.String("node_id", deviceID),
+			slog.Int("status_code", statusCode),
+			slog.String("reason", err.Error()),
+		)
 		return fmt.Errorf("UnRegister: %w", err)
 	}
 	if statusCode != http.StatusOK {
+		s.c.log.Warn("sip unregister failed",
+			slog.String("event", "sip_unregister"),
+			slog.String("node_id", deviceID),
+			slog.Int("status_code", statusCode),
+			slog.String("reason", "unexpected status"),
+		)
 		return fmt.Errorf("UnRegister: unexpected status %d", statusCode)
 	}
+	s.c.log.Info("sip unregister ok",
+		slog.String("event", "sip_unregister"),
+		slog.String("node_id", deviceID),
+		slog.Int("status_code", statusCode),
+	)
 	return nil
 }
 

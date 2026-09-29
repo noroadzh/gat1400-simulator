@@ -16,13 +16,14 @@ import (
 
 // Config is the merged configuration consumed by the rest of the process.
 type Config struct {
-	Node             NodeConfig     `yaml:"node"`
-	Protocol         ProtocolConfig `yaml:"protocol"`
-	Control          ControlConfig  `yaml:"control"`
-	Storage          StorageConfig  `yaml:"storage"`
-	Auth             AuthConfig     `yaml:"auth"`
-	ScenariosDir     string         `yaml:"scenariosDir"`
-	ScenarioSeed     int64          `yaml:"scenarioSeed"`
+	Node              NodeConfig     `yaml:"node"`
+	Protocol          ProtocolConfig `yaml:"protocol"`
+	Control           ControlConfig  `yaml:"control"`
+	Storage           StorageConfig  `yaml:"storage"`
+	Auth              AuthConfig     `yaml:"auth"`
+	Log               LogConfig      `yaml:"log"`
+	ScenariosDir      string         `yaml:"scenariosDir"`
+	ScenarioSeed      int64          `yaml:"scenarioSeed"`
 	KeepaliveInterval time.Duration  `yaml:"keepaliveInterval"` // 心跳周期，0=禁用
 }
 
@@ -56,6 +57,26 @@ type AuthConfig struct {
 	Qop      string `yaml:"qop"`
 }
 
+// LogConfig 控制日志行为（spec: logging）。
+//   - Level: debug | info | warn | error（空字符串 = 交由 --profile 决定；
+//     为空是默认值，保证 profile 预设能够生效）
+//   - Format: json | text（默认 json）
+//   - Stdout: 是否输出到 stdout（默认 true）
+//   - File: 本地文件路径（空字符串 = 不写文件）
+//   - Rotation: size | daily（仅 file 非空时生效，默认 size）
+//   - MaxSizeMB / MaxBackups / MaxAgeDays / Compress: 轮转参数
+type LogConfig struct {
+	Level      string `yaml:"level"`
+	Format     string `yaml:"format"`
+	Stdout     bool   `yaml:"stdout"`
+	File       string `yaml:"file"`
+	Rotation   string `yaml:"rotation"`
+	MaxSizeMB  int    `yaml:"maxSizeMB"`
+	MaxBackups int    `yaml:"maxBackups"`
+	MaxAgeDays int    `yaml:"maxAgeDays"`
+	Compress   bool   `yaml:"compress"`
+}
+
 // Default 返回进程内默认值。值与 YAML schema 对应，
 // 调用方可以在文件配置和代码配置之间切换而不改变字段名。
 func Default() *Config {
@@ -72,6 +93,17 @@ func Default() *Config {
 			Username: "admin",
 			Password: "admin",
 			Qop:      "auth",
+		},
+		Log: LogConfig{
+			Level:      "", // 空串 = 由 --profile 决定；profile 默认 info 与 yaml 现状对齐
+			Format:     "json",
+			Stdout:     true,
+			File:       "",
+			Rotation:   "size",
+			MaxSizeMB:  100,
+			MaxBackups: 7,
+			MaxAgeDays: 30,
+			Compress:   true,
 		},
 		ScenariosDir:      "./configs/scenarios",
 		KeepaliveInterval: 30 * time.Second,

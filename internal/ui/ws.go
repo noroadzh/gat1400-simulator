@@ -35,9 +35,12 @@ type client struct {
 	send chan []byte
 }
 
-func newHub() *Hub {
+func newHub(l *slog.Logger) *Hub {
+	if l == nil {
+		l = slog.Default()
+	}
 	return &Hub{
-		log:      slog.Default(),
+		log:      l,
 		clients:  map[*client]struct{}{},
 		register: make(chan *client, 16),
 		leave:    make(chan *client, 16),

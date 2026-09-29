@@ -24,6 +24,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/noroadzh/gat1400-simulator/internal/app/logging"
 	"github.com/noroadzh/gat1400-simulator/internal/domain/resource"
 )
 
@@ -175,6 +176,9 @@ func (s *Server) fetchKindMetas(ctx context.Context) []ResourceKindMeta {
 // countObjects 通过 GET /VIID/<Collection> 返回的列表信封解析对象数量。
 //
 // 协议端响应格式：{"ResponseStatus":{...}, "<Kind>List": {"<Kind>Object": [...]}}
+//
+// 注意：从 ctx 取出上游 BFF 请求的 trace_id 并透传到协议端请求头，使 BFF 聚合
+// 统计触发的协议端请求也能按 trace_id 串联到同一条请求链路。
 func (s *Server) countObjects(ctx context.Context, collection, kind string) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		s.protocolClient.baseURL+"/VIID/"+collection, nil)
@@ -182,6 +186,9 @@ func (s *Server) countObjects(ctx context.Context, collection, kind string) (int
 		return 0, err
 	}
 	req.Header.Set("Accept", "application/VIID+JSON")
+	if id := logging.TraceIDFromContext(ctx); id != "" {
+		req.Header.Set("X-Trace-Id", id)
+	}
 	resp, err := s.protocolClient.http.Do(req)
 	if err != nil {
 		return 0, err

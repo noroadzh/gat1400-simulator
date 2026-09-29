@@ -108,6 +108,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // installMiddleware registers the capture middleware. Digest auth is added
 // per-route (only /VIID/System/* require it per the protocol).
 func (s *Server) installMiddleware() {
+	s.e.Use(TraceMiddleware(s.log))
 	s.e.Use(CaptureMiddleware(s.recorder, ""))
 	// GAT 1400.4 carries application/VIID+JSON which echo's default binder
 	// does not understand; map it to the JSON binder so handlers can call
@@ -168,6 +169,7 @@ func InstallRoutes(e *echo.Echo, log *slog.Logger, nodeSvc *application.NodeServ
 		subRepo: newSubscribeRepo(),
 		catalog: newCatalogRepo(),
 	}
+	e.Use(TraceMiddleware(log))
 	e.Use(CaptureMiddleware(recorder, nodeID))
 	s.installRoutes()
 }

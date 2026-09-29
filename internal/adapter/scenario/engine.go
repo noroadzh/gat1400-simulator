@@ -265,6 +265,12 @@ func (e *Engine) materialise(ctx context.Context, s scenario.Scenario) error {
 		if _, err := e.provisioner.UpsertNode(ctx, n); err != nil {
 			return fmt.Errorf("node %s: %w", id, err)
 		}
+		e.log.Info("engine materialised node",
+			slog.String("event", "engine_materialise"),
+			slog.String("scenario_id", s.ID),
+			slog.String("node_id", id),
+			slog.String("role", string(ns.Role)),
+		)
 	}
 	// Ensure every materialised node has a live HTTP listener.
 	if err := e.provisioner.SyncListeners(ctx); err != nil {
@@ -435,6 +441,12 @@ func (e *Engine) emit(ctx context.Context, s scenario.Scenario, rs scenario.Reso
 			return
 		}
 	}
+	e.log.Debug("pacing emit",
+		slog.String("event", "engine_pacing_emit"),
+		slog.String("scenario_id", s.ID),
+		slog.String("node_id", rs.NodeRef),
+		slog.String("kind", string(rs.Kind)),
+	)
 	if err := e.dispatcher.Dispatch(ctx, target, rs.Kind, payload); err != nil {
 		e.log.Debug("dispatch", slog.String("err", err.Error()))
 	}

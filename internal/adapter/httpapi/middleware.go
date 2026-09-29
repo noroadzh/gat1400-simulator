@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/noroadzh/gat1400-simulator/internal/adapter/capture"
+	"github.com/noroadzh/gat1400-simulator/internal/app/logging"
 )
 
 // CaptureMiddleware 记录每个经过 echo 路由器的请求。
@@ -62,12 +63,7 @@ func CaptureMiddleware(r *capture.Recorder, nodeID string) echo.MiddlewareFunc {
 				Response:  bytes.NewReader(rw.buf.Bytes()),
 				Err:       err,
 			}
-			if entry.Err == nil {
-				// Even if err is nil we still want to propagate; pass nil.
-				logCaptureIfNeeded(ctx, r, entry)
-			} else {
-				logCaptureIfNeeded(ctx, r, entry)
-			}
+			logCaptureIfNeeded(ctx, r, entry)
 			return err
 		}
 	}
@@ -95,4 +91,49 @@ func (w *captureWriter) Write(b []byte) (int, error) {
 // 当前为 no-op：wire client 通过自己的中间件记录条目，调用方无需干预请求生命周期。
 func CaptureOutbound(_ *slog.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc { return next }
+}
+
+// TraceMiddleware 协议端 trace id 中间件。
+//
+// 从请求头读取 X-Trace-Id（或生成新值），存入 ctx 并写回响应头；记录 http_entry /
+// http_exit 两条日志（入口 Debug、出口按状态分级）。下游 handler 可通过
+// logging.TraceIDFromContext 取用。
+func TraceMiddleware(l *slog.Logger) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			id := logging.ResolveTraceID(c.Request().Header.Get("X-Trace-Id"))
+			ctx := c.Request().Context()
+			ctx = logging.WithTraceID(ctx, id)
+			c.SetRequest(c.Request().WithContext(ctx))
+			c.Response().Header().Set("X-Trace-Id", id)
+
+			req := c.Request()
+			logger := logging.FromContext(ctx)
+			logger.Debug("http request entry",
+				slog.String("event", "http_entry"),
+				slog.String("method", req.Method),
+				slog.String("path", req.URL.Path),
+				slog.String("remote", req.RemoteAddr),
+			)
+
+			start := time.Now()
+			err := next(c)
+
+			level := slog.LevelInfo
+			if err != nil {
+				level = slog.LevelWarn
+			}
+			logger.LogAttrs(ctx, level, "http request exit",
+				slog.String("event", "http_exit"),
+				slog.String("method", req.Method),
+				slog.String("path", req.URL.Path),
+				slog.Int("status", c.Response().Status),
+				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
+			)
+			if l != nil && err != nil {
+				l.Warn("http handler error", slog.String("trace_id", id), slog.String("error", err.Error()))
+			}
+			return err
+		}
+	}
 }

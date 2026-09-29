@@ -19,9 +19,10 @@ import (
 
 // Recorder 同时实现写入与读取两端（写入端在 Record，读取端委派给底层 store）。
 type Recorder struct {
-	store ports.CaptureStore
-	log   *slog.Logger
-	mu    sync.Mutex
+	store           ports.CaptureStore
+	log             *slog.Logger
+	mu              sync.Mutex
+	entriesWritten  uint64 // 进程内累计写入条数，便于运维一眼看出流量级
 }
 
 // NewRecorder 把 recorder 装配到持久化 store 上。logger 用于异步失败日志。
@@ -79,10 +80,34 @@ func (r *Recorder) Record(ctx context.Context, c Capture) {
 	}
 
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	if err := r.store.Append(entry); err != nil && r.log != nil {
-		r.log.Warn("capture append failed", slog.String("error", err.Error()))
+	appendErr := r.store.Append(entry)
+	if appendErr == nil {
+		r.entriesWritten++
 	}
+	total := r.entriesWritten
+	r.mu.Unlock()
+
+	if r.log == nil {
+		return
+	}
+	if appendErr != nil {
+		r.log.Warn("capture append failed",
+			slog.String("event", "capture_write"),
+			slog.String("node_id", c.NodeID),
+			slog.String("method", c.Method),
+			slog.String("path", c.Path),
+			slog.String("error", appendErr.Error()),
+		)
+		return
+	}
+	r.log.Debug("capture append",
+		slog.String("event", "capture_write"),
+		slog.String("node_id", c.NodeID),
+		slog.String("method", c.Method),
+		slog.String("path", c.Path),
+		slog.Int("status", c.Status),
+		slog.Uint64("count", total),
+	)
 }
 
 // Query 委派给底层持久化 store。提供该方法以让上层只看到一个 Recorder 外观。
