@@ -7,6 +7,7 @@ import { controlWs } from '@/api/ws'
 const captures = ref<Capture[]>([])
 const loading = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
+let offWs: (() => void) | null = null
 
 async function load() {
   try {
@@ -25,11 +26,13 @@ async function refresh() {
 onMounted(async () => {
   await refresh()
   timer = setInterval(refresh, 3000)
-  controlWs.on(() => refresh())
+  offWs = controlWs.on(() => refresh())
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  offWs?.()
+  offWs = null
 })
 
 function formatDuration(ms: number): string {

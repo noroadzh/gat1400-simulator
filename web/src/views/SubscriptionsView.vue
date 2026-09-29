@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { controlWs } from '@/api/ws'
 
 interface Subscription {
@@ -14,20 +14,11 @@ interface Subscription {
 const subscribes = ref<Subscription[]>([])
 const dispositions = ref<unknown[]>([])
 
+// 后端尚未实现 /api/control/subscriptions（见 openspec 待交付 change）。
+// 这里不发起请求，避免每条 WS 事件都触发一次 404；待接口落地后再接 controlApi。
 async function load() {
-  try {
-    const res = await fetch('/api/control/subscriptions')
-    if (res.ok) {
-        const data = await res.json()
-        if (Array.isArray(data)) subscribes.value = data
-        else if (data && Array.isArray((data as any).subscribes))
-          subscribes.value = (data as any).subscribes
-        if (data && Array.isArray((data as any).dispositions))
-          dispositions.value = (data as any).dispositions
-      }
-  } catch (e) {
-    console.warn('load subs failed', e)
-  }
+  subscribes.value = []
+  dispositions.value = []
 }
 
 const subsJson = ref<string>('loading...')
@@ -39,8 +30,16 @@ async function refreshJson() {
   dispJson.value = JSON.stringify(dispositions.value, null, 2)
 }
 
-onMounted(refreshJson)
-controlWs.on(refreshJson)
+// 订阅 controlWs.on 返回的解绑函数，避免组件卸载后仍被 WS 事件触发
+let offWs: (() => void) | null = null
+onMounted(() => {
+  offWs = controlWs.on(refreshJson)
+  void refreshJson()
+})
+onUnmounted(() => {
+  offWs?.()
+  offWs = null
+})
 </script>
 
 <template>
@@ -59,6 +58,17 @@ controlWs.on(refreshJson)
         <span class="panel-count">{{ dispositions.length }}</span>
       </div>
       <pre class="json-display">{{ dispJson }}</pre>
+    </div>
+
+    <div class="coming-soon glass-card">
+      <p class="coming-soon-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" fill="currentColor"/>
+        </svg>
+      </p>
+      <p class="coming-soon-text">Subscriptions / Dispositions 路由</p>
+      <p class="coming-soon-sub">后端尚未实现 <code>/api/control/subscriptions</code> 接口</p>
+      <p class="coming-soon-sub">计划在 #15 scenario-engine 中交付</p>
     </div>
   </div>
 </template>
@@ -108,5 +118,40 @@ controlWs.on(refreshJson)
   word-break: break-word;
   max-height: 480px;
   overflow-y: auto;
+}
+
+.coming-soon {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.coming-soon-icon {
+  margin: 0 0 4px;
+  color: var(--primary);
+  opacity: 0.55;
+}
+
+.coming-soon-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.coming-soon-sub {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.coming-soon-sub code {
+  font-family: 'Courier New', monospace;
+  color: var(--primary);
 }
 </style>

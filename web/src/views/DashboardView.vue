@@ -8,6 +8,7 @@ import LiveCaptureTable from '@/components/LiveCaptureTable.vue'
 const stats = ref<Stats | null>(null)
 const health = ref<SystemHealth | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
+let offWs: (() => void) | null = null
 
 async function load() {
   try {
@@ -26,11 +27,13 @@ const healthJson = computed(() =>
 onMounted(async () => {
   await load()
   timer = setInterval(load, 5000)
-  controlWs.on(() => load())
+  offWs = controlWs.on(() => load())
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  offWs?.()
+  offWs = null
 })
 </script>
 

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,6 +30,20 @@ import (
 )
 
 func main() {
+	// -healthcheck 子命令：由 Docker / Compose healthcheck 调用，
+	// 直接对本地 BFF 端口做 TCP 探测，不依赖外部 shell / curl。
+	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
+		addr := os.Getenv("GAT1400_CONTROL_LISTEN")
+		if addr == "" {
+			addr = ":14080"
+		}
+		if _, err := net.DialTimeout("tcp", "127.0.0.1"+addr, 3*time.Second); err != nil {
+			fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
 		os.Exit(1)

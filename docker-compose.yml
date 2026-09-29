@@ -22,14 +22,9 @@ services:
       - GAT1400_CONFIG_PATH=/data/config.yaml
       - GAT1400_LOG_LEVEL=info
     volumes:
-      - ./data:/data:rw
-    healthcheck:
-      # distroless has no wget/curl; check by making an HTTP call via /dev/tcp.
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/14080 && echo -e 'GET /api/control/system/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      # 使用 named volume：避免宿主机 dir UID 不匹配 distroless nonroot (65532)。
+      # 数据持久化由 Docker volume 管理，docker volume inspect gat1400-data 可查看。
+      - gat1400-data:/data
     networks:
       - gat1400-net
 
@@ -53,3 +48,7 @@ networks:
   gat1400-net:
     name: gat1400-net
     driver: bridge
+
+volumes:
+  gat1400-data:
+    name: gat1400-data

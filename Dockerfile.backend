@@ -27,7 +27,6 @@ RUN CGO_ENABLED=0 go build \
 # ── Stage 2: Runtime ────────────────────────────────────────────────────────────
 FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /gat1400-sim /gat1400-sim
 
 WORKDIR /
@@ -35,4 +34,8 @@ USER nonroot:nonroot
 
 EXPOSE 14080
 
-ENTRYPOINT ["/gat1400-sim"]
+# Docker HEALTHCHECK：调用 binary 内置的 -healthcheck 子命令做 TCP 探测，
+# 不依赖 shell（distroless 无 bash / wget / curl）。
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=10s \
+  CMD ["/gat1400-sim", "-healthcheck"]
+CMD ["/gat1400-sim"]
