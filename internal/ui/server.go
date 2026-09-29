@@ -22,14 +22,15 @@ import (
 
 // Server is the BFF echo server.
 type Server struct {
-	e           *echo.Echo
-	log         *slog.Logger
-	nodeSvc     *application.NodeService
-	scenarioSvc *application.ScenarioService
-	recorder    *capture.Recorder
-	captureRead ports.CaptureReader
-	hub         *Hub
-	srv         *http.Server
+	e              *echo.Echo
+	log            *slog.Logger
+	nodeSvc        *application.NodeService
+	scenarioSvc    *application.ScenarioService
+	recorder       *capture.Recorder
+	captureRead    ports.CaptureReader
+	hub            *Hub
+	srv            *http.Server
+	protocolClient *protocolClient
 }
 
 // Config is the configuration envelope used by the BFF.
@@ -37,20 +38,31 @@ type Config struct {
 	Control struct {
 		Listen string `yaml:"listen"`
 	} `yaml:"control"`
+	// Protocol 描述协议端（UAS）监听地址与对外 base URL；
+	// BFF 资源对象控制面端点组会把请求透传到该 base URL。
+	Protocol struct {
+		Listen  string `yaml:"listen"`
+		BaseURL string `yaml:"baseUrl"`
+	} `yaml:"protocol"`
 }
 
 // NewServer 装配 BFF。captureRead 供仪表盘抓包面板查询；recorder 保留用于实时录制与广播副作用。
-func NewServer(l *slog.Logger, nodeSvc *application.NodeService, scenarioSvc *application.ScenarioService, recorder *capture.Recorder, captureRead ports.CaptureReader, _ *Config) *Server {
+func NewServer(l *slog.Logger, nodeSvc *application.NodeService, scenarioSvc *application.ScenarioService, recorder *capture.Recorder, captureRead ports.CaptureReader, cfg *Config) *Server {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 	hub := newHub()
+	protocolBase := ""
+	if cfg != nil {
+		protocolBase = cfg.Protocol.BaseURL
+	}
 	s := &Server{
 		e: e, log: l,
 		nodeSvc: nodeSvc, scenarioSvc: scenarioSvc,
-		recorder:    recorder,
-		captureRead: captureRead,
-		hub:         hub,
+		recorder:       recorder,
+		captureRead:    captureRead,
+		hub:            hub,
+		protocolClient: newProtocolClient(protocolBase, l),
 	}
 	go hub.run()
 	s.installRoutes()
@@ -108,6 +120,8 @@ func (s *Server) installRoutes() {
 	api.GET("/captures/export/har", s.handleCaptureExportHAR)
 
 	api.GET("/stats", s.handleStats)
+
+	s.installResourceRoutes(api)
 
 	ws := s.e.Group("/ws")
 	ws.GET("/events", s.handleEvents)

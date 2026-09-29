@@ -200,6 +200,13 @@ deviceID := idGen.DeviceID() // 例如 "41000000300101000001"
 | GET    | `/api/control/captures/export/jsonl` | 导出 JSONL |
 | GET    | `/api/control/captures/export/har` | 导出 HAR |
 | GET    | `/api/control/stats` | 聚合统计（节点 / 场景 / 抓包计数） |
+| GET    | `/api/control/resources` | 资源对象类型枚举（12 种 Kind × collection / idField / count） |
+| GET    | `/api/control/resources/:kind/list` | 列出该 Kind 全部对象（透传协议端 `GET /VIID/<Collection>`） |
+| GET    | `/api/control/resources/:kind/list/:id` | 单条资源（透传协议端 `GET /VIID/<Collection>/:id`） |
+| POST   | `/api/control/resources/:kind/list` | 新增资源（透传协议端 `POST /VIID/<Collection>`；请求体需 `<Kind>List.<Kind>Object[]` 信封） |
+| PUT    | `/api/control/resources/:kind/list/:id` | 更新资源（透传协议端 `PUT /VIID/<Collection>/:id`） |
+| DELETE | `/api/control/resources/:kind/list/:id` | 删除资源（透传协议端 `DELETE /VIID/<Collection>/:id`） |
+| GET    | `/api/control/resources/:kind/list/:id/info` | Info 子资源（透传协议端 `GET /VIID/<Collection>/:id/Info`） |
 | GET    | `/ws/events` | WebSocket 实时事件 |
 
 ## 六、WebSocket 事件

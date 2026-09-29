@@ -6,6 +6,15 @@
 
 ## [未发布]
 
+### feat(bff,web) — 资源对象 API 端到端打通（路线图 #17）
+
+- BFF `/api/control/resources/*` 7 个端点：枚举 12 Kind、`list` / `list/:id` / `POST list` / `PUT list/:id` / `DELETE list/:id` / `info`，全部透传协议端 `/VIID/<Collection>`
+- 协议文档 `docs/PROTOCOL.md` §5.2 补齐 12 Kind × 6 端点表（POST/GET/PUT/DELETE + Info/Data），与协议端实现一一对应
+- 前端 `ResourcesView.vue` 从硬编码 12 行 `/VIAS/api/v1/...` 重写为：12 卡片网格 + 选中 Kind 拉取真实列表 + POST 测试对话框 + JSON 查看器 + 删除 + 分页 + URI 列修正为 `/VIID/<Collection>`
+- 新增 `web/src/api/resources-meta.ts` Kind 中文元数据、`web/src/api/control.ts` 5 个 BFF 调用方法
+- 新增 `internal/ui/resources_handler.go` + `server_test.go` 6 个用例覆盖 200/404/400 边界与 query string 透传
+- 新建 OpenSpec 主 spec `adapter-resource-collection/spec.md`（8 Requirement 覆盖 12 Kind CRUD/Info/Data 契约），同步 web-bff spec delta
+
 ### chore(repo) — 治理 .gitignore 与本地化文档
 
 - `.gitignore` 新增忽略 `.codebuddy/`、`openspec/`、`web/node_modules/`、`web/dist/`、`*.tsbuildinfo`

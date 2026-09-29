@@ -129,22 +129,65 @@ User-Identify: <device-id>
 }
 ```
 
-### 4.2 集合类（Collection）
+### 4.2 资源对象（§5.2 数据服务）
 
-> 通用规则：所有集合接口支持 POST（批量插入）、GET（列表 / 单条）、DELETE。
-> 支持的 Kind：`Person`、`Face`、`Vehicle`、`Plate`、`NonMotorVehicle`、`Image`、`Object`。
+> 通用规则：所有资源对象接口对 12 种 Kind 提供一致的能力——集合批量写入（标准信封）、
+> 列表查询、单条查询/更新/删除、Info/Data 子资源。每个 Kind 的路由段是 Kind 的复数形式，
+> 主键字段名按 Kind 区分（如 `PersonID`、`MotorVehicleID`）。写入后的对象视为不透明
+> payload 整体保存与回显，第三方自定义字段不被丢弃。
 
-#### POST /VIID/<Kind>
+#### 4.2.1 支持的 12 种 Kind
+
+| Kind（单数） | URI 段（复数） | 主键字段 | 中文 |
+|---|---|---|---|
+| `Person` | `Persons` | `PersonID` | 人员 |
+| `Face` | `Faces` | `FaceID` | 人脸 |
+| `MotorVehicle` | `MotorVehicles` | `MotorVehicleID` | 机动车 |
+| `NonMotorVehicle` | `NonMotorVehicles` | `NonMotorVehicleID` | 非机动车 |
+| `Thing` | `Things` | `ThingID` | 物品 |
+| `Scene` | `Scenes` | `SceneID` | 场景 |
+| `VideoSlice` | `VideoSlices` | `VideoSliceID` | 视频片段 |
+| `Image` | `Images` | `ImageID` | 图像 |
+| `File` | `Files` | `FileID` | 文件 |
+| `Case` | `Cases` | `CaseID` | 案件 |
+| `VideoLabel` | `VideoLabels` | `VideoLabelID` | 视频标签 |
+| `AnalysisRule` | `AnalysisRules` | `AnalysisRuleID` | 分析规则 |
+
+> 主键字段映射实现见 `internal/domain/resource.IDOf(kind)`；新增 Kind 只需同步更新
+> `Kind` 常量、`CollectionOf`、`IDOf` 三处，路由注册自动生效。
+
+#### 4.2.2 端点总表
+
+| 方法 | 路径 | 含义 |
+|------|------|------|
+| POST | `/VIID/<Collection>` | 批量写入（标准信封） |
+| GET | `/VIID/<Collection>` | 列表查询 |
+| GET | `/VIID/<Collection>/<id>` | 单条查询 |
+| PUT | `/VIID/<Collection>/<id>` | 单条更新 |
+| DELETE | `/VIID/<Collection>/<id>` | 单条删除（软删除：从内存 map 移除） |
+| GET | `/VIID/<Collection>/<id>/Info` | Info 子资源（当前占位：返回父对象） |
+| GET | `/VIID/<Collection>/<id>/Data` | Data 子资源（同上占位） |
+| POST | `/VIID/<Collection>/<id>/Data` | Data 子资源写入（同上占位） |
+| DELETE | `/VIID/<Collection>/<id>/Data` | Data 子资源删除（同上占位） |
+
+`<Collection>` 取自上表的 URI 段列；`<id>` 是该 Kind 的主键字段值。
+
+#### 4.2.3 POST /VIID/<Collection>（批量写入）
+
+请求体采用标准 §5.2 信封：
 
 ```json
 {
-  "<Kind>List": {
-    "<Kind>Object": [
+  "PersonList": {
+    "PersonObject": [
       {
-        "<Kind>ID": "41000000005030312001",
+        "PersonID": "P00000001",
+        "Name": "Alice",
+        "Gender": "female",
         "ShotTime": "2026-09-28T10:00:00+08:00",
         "DeviceID": "41000000005030312222"
-      }
+      },
+      { "PersonID": "P00000002", "Name": "Bob" }
     ]
   }
 }
@@ -155,29 +198,57 @@ User-Identify: <device-id>
 ```json
 {
   "ResponseStatus": { "StatusCode": 0, "StatusString": "OK" },
-  "ItemCount": 1
+  "ItemCount": 2
 }
 ```
 
-#### GET /VIID/<Kind>
+- 缺主键的对象会被**静默忽略**，不影响其它对象的写入；`ItemCount` 仅统计成功写入的数量。
+- 写入成功后服务端会调用 `ports.NotifyResource` 通知进程内订阅者；通知失败仅记日志，
+  不阻断响应。
 
-支持 `?pageSize=&pageNum=` 分页查询。
+#### 4.2.4 GET /VIID/<Collection>（列表查询）
+
+返回当前该 Kind 已存储的全部对象：
 
 ```json
 {
   "ResponseStatus": { "StatusCode": 0, "StatusString": "OK" },
-  "<Kind>List": { "<Kind>Object": [...] },
-  "Num": 10
+  "PersonList": { "PersonObject": [ {"PersonID":"P00000001",...}, ... ] }
 }
 ```
 
-#### GET /VIID/<Kind>/<id>
+空集合时 `PersonObject` 为空数组 `[]`，不返回 404。
 
-返回单条。响应失败时 `StatusCode=2`（NOTFOUND）。
+#### 4.2.5 GET /VIID/<Collection>/<id>（单条查询）
 
-#### DELETE /VIID/<Kind>/<id>
+- 命中：返回 `200 OK` + `{ResponseStatus, <Kind>: {<obj>}}`（单数信封）。
+- 未命中：返回 `404 Not Found`，body 含 `ResponseStatus` 错误信封，状态码 2（NOTFOUND）。
 
-删除单条。后续 GET 返回 404。
+#### 4.2.6 PUT /VIID/<Collection>/<id>（单条更新）
+
+请求体为整条对象，按 URL 中的 `<id>` 替换存储。响应：
+
+```json
+{ "ResponseStatus": { "StatusCode": 0, "StatusString": "OK" } }
+```
+
+#### 4.2.7 DELETE /VIID/<Collection>/<id>（单条删除）
+
+软删除：从内存 map 中移除该主键。响应 `200 OK`。删除后再 GET 返回 404。
+
+#### 4.2.8 Info / Data 子资源
+
+Info 与 Data 子资源为占位实现：GET 时返回父对象本身（外层包 `Info` 字段），POST/PUT/DELETE
+均接受并返回 `200 OK`。生产实现可在此处扩展为完整元信息或二进制数据载荷。
+
+#### 4.2.9 错误码
+
+| 场景 | HTTP 状态 | StatusCode |
+|---|---|---|
+| body 缺 `<Kind>List` 包裹 | 400 | 1（INVALID） |
+| body 缺 `<Kind>Object` 数组 | 400 | 1（INVALID） |
+| 单条 GET 未命中 | 404 | 2（NOTFOUND） |
+| 写入成功 | 200 | 0（OK） |
 
 ### 4.3 级联类（Cascade）
 

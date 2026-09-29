@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -204,8 +205,31 @@ func httpapiConfig(c *config.Config) *httpapi.Config {
 	}
 }
 
+// uiConfig adapts the global Config to the BFF Config shape.
+//
+// 关键：把协议端监听地址（`:9000`）转换成 BFF 可访问的 base URL（`http://127.0.0.1:9000`）。
+// BFF 资源对象端点组（/api/control/resources/*）通过该 base URL 透传到协议端。
 func uiConfig(c *config.Config) *ui.Config {
 	u := &ui.Config{}
 	u.Control.Listen = c.Control.Listen
+	u.Protocol.Listen = c.Protocol.Listen
+	u.Protocol.BaseURL = protocolBaseURL(c.Protocol.Listen)
 	return u
 }
+
+// protocolBaseURL 把 ":14000" 形式监听地址转换为 BFF 可访问的 base URL。
+func protocolBaseURL(listen string) string {
+	addr := listen
+	if addr == "" {
+		addr = ":14000"
+	}
+	host := "127.0.0.1"
+	if strings.HasPrefix(addr, ":") {
+		return "http://" + host + addr
+	}
+	if strings.Contains(addr, ":") {
+		return "http://" + addr
+	}
+	return "http://" + addr + ":14000"
+}
+
