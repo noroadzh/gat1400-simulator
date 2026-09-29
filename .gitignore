@@ -11,8 +11,20 @@
 .DS_Store
 .idea/
 .vscode/
-/node_modules/
+
+# ── 本地工具目录（不纳入版本管理）──────────────────────────────
+# IDE 助手配置：agents / commands / skills / plans
+/.codebuddy/
+# OpenSpec 变更管理目录：specs / changes / archive
+/openspec/
+
+# ── 前端 ────────────────────────────────────────────────────────
+# 依赖目录（任意层级）
+node_modules/
+# Vite 构建产物
 /web/dist/
-# Frontend SPA output (Change 3 makes this a Vite build artifact;
-# currently it is a hand-written CDN SPA still served via embed.FS)
+# TypeScript 增量构建缓存
+*.tsbuildinfo
+
+# ── 内嵌静态资源（已由 Vite + nginx 容器替代，不再 embed）─────
 /internal/ui/dist/

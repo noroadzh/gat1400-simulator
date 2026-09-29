@@ -1,13 +1,13 @@
-# 架构说明 — GAT 1400 协议模拟器
+# 架构说明 — GA/T 1400 协议模拟器
 
-> 文档配套代码版本：v0.1.0
-> 最后更新：2026-09-28
+> 文档配套代码版本：v0.2.0
+> 最后更新：2026-09-29
 
-本文档从全局到细节描述了 GAT 1400 协议模拟器的系统组成、模块划分、数据流转路径，并给出代码层面的分层纪律。
+本文档从全局到细节描述了 GA/T 1400 协议模拟器的系统组成、模块划分、数据流转路径，并给出代码层面的分层纪律。
 
 ## 一、系统概述
 
-GAT 1400 协议模拟器是基于 Go 语言开发的纯命令行 / Web 应用，能够在**单个进程**内同时扮演符合 GA/T 1400.4《应用平台接口协议要求》的视频图像信息管理系统的"设备（UAC）"和"平台（UAS）"两种角色。
+GA/T 1400 协议模拟器是基于 Go 语言开发的后端 + Vue 3 前端 + Docker 容器化应用，能够在**单个后端进程**内同时扮演符合 GA/T 1400.4《应用平台接口协议要求》的视频图像信息管理系统的"设备（UAC）"和"平台（UAS）"两种角色。
 
 模拟器运行模式如下：
 
@@ -22,64 +22,78 @@ GAT 1400 协议模拟器是基于 Go 语言开发的纯命令行 / Web 应用，
 ## 二、组件拓扑图
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                  gat1400-simulator 进程                       │
-│                                                                │
-│   ┌────────────────┐             ┌────────────────────────┐  │
-│   │ cmd/gat1400-sim│             │  Web BFF（:19000）     │  │
-│   │  启动入口      │             │  echo REST + WebSocket │  │
-│   └───────┬────────┘             └──────────┬─────────────┘  │
-│           │                                  ▲                │
-│           ▼                                  │                │
-│   ┌──────────────────────────────────────────────────────┐  │
-│   │                internal/app/                        │  │
-│   │    ┌────────────────┐  ┌──────────────────────────┐│  │
-│   │    │  NodeService   │  │  ScenarioService         ││  │
-│   │    │  CRUD + 心跳   │  │  启动 / 停止 / 自启动    ││  │
-│   │    └──────┬─────────┘  └───────────┬──────────────┘│  │
-│   │           │                         │                │  │
-│   │    ┌──────┴─────────────────────────┴──────────────┐│  │
-│   │    │              ports/ 端口层（接口）            ││  │
-│   │    │  NodeStore | ResourceStore | CaptureStore    ││  │
-│   │    └──────────────────────────┬───────────────────┘│  │
-│   └───────────────────────────────┼─────────────────────┘  │
-│                                   │                          │
-│   ┌───────────────────────────────┼──────────────────────┐  │
-│   │              internal/domain/ 领域层                 │  │
-│   │  node | resource | scenario | response | subscription│  │
-│   └───────────────────────────────┬──────────────────────┘  │
-│                                   │                          │
-│   ┌───────────────────────────────┼──────────────────────┐  │
-│   │              internal/adapter/ 适配层                │  │
-│   │                                                        │  │
-│   │  httpapi  ─────────── 协议服务端（:19001）           │  │
-│   │    ├─ Digest 中间件（RFC 2617 qop=auth）            │  │
-│   │    ├─ User-Identify 中间件                          │  │
-│   │    └─ Capture 中间件（抓包）                        │  │
-│   │                                                        │  │
-│   │  wire  ────────────── 设备侧 HTTP 客户端（UAC）    │  │
-│   │    ├─ Digest 自动重试（401 → 携带挑战再发）         │  │
-│   │    └─ NonceStore（SQLite 持久化 nonce）            │  │
-│   │                                                        │  │
-│   │  scenario  ────────── YAML 场景引擎                 │  │
-│   │    ├─ LoadAll → ScenarioEngine → Runnable          │  │
-│   │    ├─ ResourceFactory（fake / static）             │  │
-│   │    └─ FaultInjector（delay / drop / reorder）      │  │
-│   │                                                        │  │
-│   │  storage  ─────────── SQLite 持久化                 │  │
-│   │    ├─ CaptureStore（抓包数据）                      │  │
-│   │    └─ NonceStore（nonce 重放保护）                 │  │
-│   │                                                        │  │
-│   │  capture / generator / media ── 可选扩展模块        │  │
-│   └────────────────────────────────────────────────────┘  │
-│                                                              │
-│   ┌──────────────────────────────────────────────────────┐ │
-│   │           internal/ui/  Web 控制面                   │ │
-│   │   ├─ REST 处理器（/api/control/*）                  │ │
-│   │   ├─ WebSocket Hub（实时事件）                      │ │
-│   │   └─ embed.FS → Vue3 SPA（前端构建产物）            │ │
-│   └──────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                    docker-compose 编排视图                         │
+│                                                                    │
+│  ┌───────────────────────────┐    ┌────────────────────────────┐  │
+│  │  frontend (nginx:8080→80) │    │  backend (distroless:14080)│  │
+│  │  ────────────────────────  │    │  ─────────────────────────  │  │
+│  │  - 服务 Vue3 SPA（静态）   │───►│  - Web BFF  (:14080)       │  │
+│  │  - SPA fallback           │反代│    └─ /api/control/* JSON  │  │
+│  │  - /api/ /ws/ 反向代理    │    │    └─ /ws/events WebSocket │  │
+│  └───────────────────────────┘    │  - 协议服务端 (:14000)     │  │
+│                                   │    └─ /VIID/* REST         │  │
+│                                   │  - SQLite (data/ 共享卷)   │  │
+│                                   └────────────────────────────┘  │
+│                                                │                    │
+│                                                ▼                    │
+│                                   ┌────────────────────────────┐  │
+│                                   │      backend 进程内部     │  │
+│                                   │                            │  │
+│                                   │  ┌──────────────────────┐  │  │
+│                                   │  │   cmd/gat1400-sim    │  │  │
+│                                   │  │     启动入口         │  │  │
+│                                   │  └──────────┬───────────┘  │  │
+│                                   │             │              │  │
+│                                   │  ┌──────────▼───────────┐  │  │
+│                                   │  │   internal/app/      │  │  │
+│                                   │  │  NodeService         │  │  │
+│                                   │  │  ScenarioService     │  │  │
+│                                   │  └──────────┬───────────┘  │  │
+│                                   │             │              │  │
+│                                   │  ┌──────────▼───────────┐  │  │
+│                                   │  │  ports/ 端口层接口   │  │  │
+│                                   │  │ NodeStore|ResourceStore│ │  │
+│                                   │  │ CaptureStore         │  │  │
+│                                   │  └──────────┬───────────┘  │  │
+│                                   │             │              │  │
+│                                   │  ┌──────────▼───────────┐  │  │
+│                                   │  │ internal/domain/     │  │  │
+│                                   │  │ node|resource|scenario│ │  │
+│                                   │  │ response|subscription│  │  │
+│                                   │  └──────────┬───────────┘  │  │
+│                                   │             │              │  │
+│                                   │  ┌──────────▼───────────┐  │  │
+│                                   │  │ internal/adapter/    │  │  │
+│                                   │  │                      │  │  │
+│                                   │  │ httpapi ── 协议服务 │  │  │
+│                                   │  │  Digest 中间件       │  │  │
+│                                   │  │  User-Identify 中间件│  │  │
+│                                   │  │  Capture 中间件      │  │  │
+│                                   │  │                      │  │  │
+│                                   │  │ wire ──── 设备侧客户端│  │  │
+│                                   │  │  Digest 自动重试     │  │  │
+│                                   │  │                      │  │  │
+│                                   │  │ scenario ─ YAML 引擎 │  │  │
+│                                   │  │ storage ── SQLite    │  │  │
+│                                   │  │ capture / generator /│  │  │
+│                                   │  │ media（可选扩展）    │  │  │
+│                                   │  └──────────────────────┘  │  │
+│                                   │                            │  │
+│                                   │  ┌──────────────────────┐  │  │
+│                                   │  │   internal/ui/       │  │  │
+│                                   │  │   Web 控制面 BFF     │  │  │
+│                                   │  │  /api/control/* REST │  │  │
+│                                   │  │  WebSocket Hub       │  │  │
+│                                   │  └──────────────────────┘  │  │
+│                                   └────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────┘
+
+     ┌──────────────────────────────────────────────────────────┐
+     │                    web/ 前端工程（Vite）                  │
+     │  Vue 3 + TS + Element Plus                               │
+     │  npm run build → web/dist/ → nginx 静态服务             │
+     └──────────────────────────────────────────────────────────┘
 ```
 
 ## 三、核心数据流
@@ -90,12 +104,12 @@ GAT 1400 协议模拟器是基于 Go 语言开发的纯命令行 / Web 应用，
    device 节点（设备模式）
         │
         │ wire.Client.PostJSON("/VIID/Persons", body)
-        │   TCP SYN → :19001
+        │   TCP SYN → :14000
         ├─ HTTP POST /VIID/Persons
         │   Content-Type: application/VIID+JSON
         │   User-Identify: <device-id>
         ▼
-   httpapi.Server（:19001）
+   httpapi.Server（:14000）
         ├─ CaptureMiddleware（记录请求、响应）
         ├─ UserIdentifyMiddleware（更新心跳）
         └─ Route → collection.PersonsPOST()
@@ -104,7 +118,7 @@ GAT 1400 协议模拟器是基于 Go 语言开发的纯命令行 / Web 应用，
           resourceRepo.Put("Person", entry)
                 │
                 ▼
-          BFF WebSocket → 浏览器（推送、捕获、监听）
+          BFF WebSocket (:14080/ws/events) → nginx 反代 → 浏览器（推送、捕获、监听）
 ```
 
 ### 3.2 Digest 认证握手
@@ -146,11 +160,13 @@ subscribeRepo.RecordDisposition()
 
 ## 四、端口分配
 
-| 端口 | 用途 | 说明 |
-|------|------|------|
-| `:19000` | Web 控制面 BFF | 内嵌 SPA + REST + WebSocket |
-| `:19001` | 协议服务端 | GA/T 1400.4 REST API |
-| `:19101+` | 设备节点本地监听 | 仅当 device 节点对外暴露时占用 |
+| 端口 | 用途 | 暴露方式 |
+|------|------|---------|
+| `:8080` | 前端 SPA（nginx） | 仅 docker-compose 模式，浏览器访问入口 |
+| `:5173` | 前端开发服务器 | `npm run dev` 时使用，自动代理 `/api` 到 `:14080` |
+| `:14080` | 控制面 BFF（JSON + WebSocket） | docker-compose 模式仅在容器网络内可见；本地开发直接访问 |
+| `:14000` | 协议服务端（GA/T 1400.4 REST） | 始终监听，对接平台 / 设备 |
+| `:14101+` | 设备节点本地监听 | 仅当 device 节点对外暴露时占用 |
 
 ## 五、持久化（SQLite）
 
@@ -185,12 +201,13 @@ internal/domain/   ──→ 仅依赖标准库
 | 数据库 | modernc.org/sqlite —— 纯 Go，无 CGO 依赖 |
 | ID 生成 | 自研 `ids.Generator`，符合 GA/T 1400 规定的 20 位 DeviceID |
 | 随机源 | `crypto/rand`（nonce、UUID 等），严禁 `time.Now()` 充当熵源 |
-| 前端嵌入 | `embed.FS`，启动时 SPA 直接在内存中服务 |
+| 前端部署 | 由独立 nginx 容器服务 SPA，BFF 不再 embed；通过 `/api` `/ws` 反向代理通信 |
 | 日志 | `log/slog`（结构化 JSON，可切换为 text） |
 | OutboundDispatcher | 客户端 UAC 各业务方法（Register/Subscribe/Disposition/Notification）由统一的 `dispatcher.OutboundDispatcher` 调度，便于在 e2e 中注入 mock |
 | Engine.AutoStart | 与 `Engine.Start` 并存的入口；前者根据 `Scenario.Schedule.AutoStart` 决定是否启动，后者无条件启动；通过 `AutoStart(false)` 可实现幂等 no-op |
+| 容器化 | frontend 用 nginx:alpine 自服务 SPA + 反代；backend 用 distroless/static-debian12 最小化攻击面 |
 
-## 九、可扩展模块
+## 八、可扩展模块
 
 下列模块已存在但暂未启用，可在后续 change 中扩展：
 

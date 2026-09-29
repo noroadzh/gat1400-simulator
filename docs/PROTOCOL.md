@@ -8,7 +8,7 @@
 ### 1.1 BaseURL
 
 ```
-http://<host>:19001/VIID/
+http://<host>:14000/VIID/
 ```
 
 ### 1.2 媒体类型
@@ -30,7 +30,7 @@ Content-Type: application/VIID+JSON
 请求头格式：
 
 ```
-Authorization: Digest username="admin", realm="viid",
+Authorization: Digest username="admin", realm="com.gat1400.simulator",
     nonce="<handler-side-nonce>", uri="/VIID/System/Register",
     qop=auth, nc=00000001, cnonce="<client-nonce>",
     response="<computed-md5>", opaque=""
@@ -40,7 +40,7 @@ Authorization: Digest username="admin", realm="viid",
 
 ```
 HTTP/1.1 401 Unauthorized
-WWW-Authenticate: Digest realm="viid", qop="auth", nonce="<hex>", opaque=""
+WWW-Authenticate: Digest realm="com.gat1400.simulator", qop="auth", nonce="<hex>", opaque=""
 ```
 
 ### 2.2 User-Identify 头
@@ -299,7 +299,7 @@ DeviceID 为 20 位十进制字符串，按 `8+2+2+2+6` 切分：
 
 ```
 POST /VIID/System/Register HTTP/1.1
-Host: 192.168.1.10:19001
+Host: 192.168.1.10:14000
 Authorization: Digest username="admin",realm="com.gat1400.simulator",
    nonce="9c4f2a8b1e3d7c5f6a9b2e4d8c1f3a5b7e9d2c4f6a8b1e3d5c7f9a2b4e6d8c1f",
    uri="/VIID/System/Register",qop=auth,nc=00000001,cnonce="ab12cd34ef56ab78",
