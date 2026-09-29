@@ -1,0 +1,15 @@
+# Gat 1400 simulator - .gitignore
+
+/bin/
+/data/
+/dist/
+*.log
+*.sqlite
+*.sqlite-journal
+*.har
+*.jsonl
+.DS_Store
+.idea/
+.vscode/
+/node_modules/
+/web/dist/

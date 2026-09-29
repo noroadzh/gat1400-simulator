@@ -1,0 +1,79 @@
+{
+  "description": "System/Register — Nonce 重放 MUST 被拒绝：同一 nonce+nc 第二次使用应返回 401",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/System/Register",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "RegisterObject": {
+          "DeviceID": "41000000005030312222",
+          "DeviceName": "test-device",
+          "Manufacturer": "test"
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Digest realm=\"viid\",qop=\"auth\",nonce=\"REPLAY_NONCE_001\",opaque=\"\""
+      },
+      "body": null
+    },
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/System/Register",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222",
+        "Authorization": "Digest username=\"admin\",realm=\"viid\",nonce=\"REPLAY_NONCE_001\",uri=\"/VIID/System/Register\",qop=\"auth\",nc=00000001,cnonce=\"0000000000000001\",response=\"placeholder\",opaque=\"\""
+      },
+      "body": {
+        "RegisterObject": {
+          "DeviceID": "41000000005030312222",
+          "DeviceName": "test-device",
+          "Manufacturer": "test"
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": null
+    },
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/System/Register",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222",
+        "Authorization": "Digest username=\"admin\",realm=\"viid\",nonce=\"REPLAY_NONCE_001\",uri=\"/VIID/System/Register\",qop=\"auth\",nc=00000001,cnonce=\"0000000000000001\",response=\"placeholder\",opaque=\"\""
+      },
+      "body": {
+        "RegisterObject": {
+          "DeviceID": "41000000005030312222",
+          "DeviceName": "test-device",
+          "Manufacturer": "test"
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Digest realm=\"viid\",qop=\"auth\",nonce=\"\",opaque=\"\""
+      },
+      "body": null
+    }
+  ]
+}

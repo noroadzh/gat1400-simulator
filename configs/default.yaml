@@ -1,0 +1,33 @@
+# Gat 1400 simulator - default configuration.
+#
+# Copy to configs/local.yaml and adjust as needed; the simulator will pick
+# the local file first, then fall back to defaults.
+
+node:
+  # Site code (first 8 digits of GAT 1400 / GB/T 28181 DeviceID).
+  siteCode: 4100000000
+  # Industry code: 130 = social public security / video image.
+  industryCode: 130
+
+protocol:
+  listen: ":14000"
+
+control:
+  listen: ":14080"
+
+storage:
+  path: "./data/gat1400.db"
+
+auth:
+  realm: "com.gat1400.simulator"
+  username: "admin"
+  password: "admin"
+  qop: "auth"
+
+# keepaliveInterval controls the /VIID/System/Keepalive ping interval per device node.
+# 0 or omitted = disabled. Examples: "30s", "60s", "90s".
+keepaliveInterval: "30s"
+
+scenarios:
+  dir: "./configs/scenarios"
+  autoStart: []

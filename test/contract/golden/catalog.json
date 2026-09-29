@@ -1,0 +1,105 @@
+{
+  "description": "Catalog — GET APEs, APSs, Tollgates, Lanes all return non-empty lists",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/APEs",
+      "headers": {},
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "APEObject": [
+          {
+            "APEID": "41000000000000000001"
+          }
+        ]
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/APSs",
+      "headers": {},
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "APSObject": [
+          {
+            "APSID": "41000000000000000001"
+          }
+        ]
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/Tollgates",
+      "headers": {},
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "TollgateObject": [
+          {
+            "TollgateID": "41000000000000000001"
+          }
+        ]
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/Lanes",
+      "headers": {},
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "LaneObject": [
+          {
+            "LaneID": "41000000000000000001"
+          }
+        ]
+      }
+    }
+  ]
+}

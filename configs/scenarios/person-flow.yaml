@@ -1,0 +1,39 @@
+# Person flow scenario — a tiny end-to-end demo.
+#
+# 1 collector APE pushes 1 person per second; 1 subscriber receives the
+# notifications on its /VIID/SubscribeNotifications endpoint.
+
+id: person-flow
+name: "Person flow demo"
+tags: [demo, persons]
+nodes:
+  - ref: collector
+    role: device
+    listen: ":14101"
+    capabilities: [system, collection, capture-agent]
+  - ref: viewer
+    role: platform-small
+    listen: ":14102"
+    capabilities: [system, collection, data-service, cascade]
+
+subscriptions:
+  - subscriber: viewer
+    publisher: collector
+    topic: Person
+    interval: 5s
+    receiveAddr: "http://127.0.0.1:14102/VIID/SubscribeNotifications"
+
+resources:
+  - node: collector
+    kind: Person
+    rate: 1
+
+exceptions:
+  registerDropRate: 0
+  keepaliveJitter: 0s
+  subscribeRejectRate: 0
+  latencySpike: 0s
+
+schedule:
+  autoStart: false
+  duration: 0s

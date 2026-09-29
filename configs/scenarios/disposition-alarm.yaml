@@ -1,0 +1,19 @@
+# Disposition alarm scenario — sends one disposition every 10 seconds.
+
+id: disposition-alarm
+name: "Disposition alarm demo"
+tags: [demo, disposition]
+nodes:
+  - ref: viewer
+    role: platform-large
+    listen: ":14131"
+    capabilities: [system, cascade]
+
+resources:
+  - node: viewer
+    kind: Face
+    rate: 1
+
+schedule:
+  autoStart: false
+  duration: 0s

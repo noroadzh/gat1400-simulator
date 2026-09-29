@@ -1,0 +1,25 @@
+# Vehicle plate scenario — APE pushes motor-vehicle records.
+
+id: vehicle-plate
+name: "Vehicle plate demo"
+tags: [demo, vehicles]
+nodes:
+  - ref: ape
+    role: device
+    listen: ":14111"
+    capabilities: [system, collection]
+  - ref: server
+    role: platform-large
+    listen: ":14112"
+    capabilities: [system, collection, data-service, cascade]
+
+resources:
+  - node: ape
+    kind: MotorVehicle
+    rate: 2
+
+exceptions:
+  keepaliveJitter: 200ms
+
+schedule:
+  autoStart: false

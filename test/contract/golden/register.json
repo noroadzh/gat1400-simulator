@@ -1,0 +1,60 @@
+{
+  "description": "System/Register — Digest auth handshake: unauthenticated POST → 401 with challenge → retry with Authorization → 200",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/System/Register",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "RegisterObject": {
+          "DeviceID": "41000000005030312222",
+          "DeviceName": "test-device",
+          "Manufacturer": "test"
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 401,
+      "headers": {
+        "Content-Type": "text/plain",
+        "WWW-Authenticate": "Digest realm=\"viid\",qop=\"auth\",nonce=\"test-nonce-001\",opaque=\"\""
+      },
+      "body": null
+    },
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/System/Register",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222",
+        "Authorization": "Digest username=\"admin\",realm=\"viid\",nonce=\"test-nonce-001\",uri=\"/VIID/System/Register\",qop=auth,nc=00000001,cnonce=\"0000000000000001\",response=\"placeholder\",opaque=\"\""
+      },
+      "body": {
+        "RegisterObject": {
+          "DeviceID": "41000000005030312222",
+          "DeviceName": "test-device",
+          "Manufacturer": "test"
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    }
+  ]
+}

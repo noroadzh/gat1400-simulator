@@ -1,0 +1,100 @@
+{
+  "description": "Cascade/Subscribes — POST subscribe, GET list, GET single, DELETE",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/Subscribes",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "SubscribeList": {
+          "SubscribeObject": [
+            {
+              "SubscribeID": "SUB00000001",
+              "Title": "男性布控",
+              "Resource": "Person",
+              "SubscribeMethod": "notify",
+              "Filter": "Gender=male",
+              "Timeout": 86400
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "SubscribeList": {
+          "SubscribeObject": [
+            {
+              "SubscribeID": "SUB00000001"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/Subscribes",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "SubscribeList": {
+          "SubscribeObject": [
+            {
+              "SubscribeID": "SUB00000001",
+              "Title": "男性布控"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "DELETE",
+      "path": "/VIID/Subscribes/SUB00000001",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    }
+  ]
+}

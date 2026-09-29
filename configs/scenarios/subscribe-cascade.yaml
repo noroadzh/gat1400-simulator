@@ -1,0 +1,24 @@
+# Subscribe cascade scenario — view library subscriber receives notifications.
+
+id: subscribe-cascade
+name: "Subscribe cascade demo"
+tags: [demo, subscribe]
+nodes:
+  - ref: upper
+    role: platform-large
+    listen: ":14121"
+    capabilities: [system, cascade]
+  - ref: lower
+    role: platform-small
+    listen: ":14122"
+    capabilities: [system, collection, data-service, cascade]
+
+subscriptions:
+  - subscriber: upper
+    publisher: lower
+    topic: Face
+    interval: 5s
+    receiveAddr: "http://127.0.0.1:14121/VIID/SubscribeNotifications"
+
+schedule:
+  autoStart: false

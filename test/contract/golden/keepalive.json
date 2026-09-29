@@ -1,0 +1,32 @@
+{
+  "description": "System/Keepalive — User-Identify header marks node as online, returns 200",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/System/Keepalive",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "KeepaliveObject": {
+          "DeviceID": "41000000005030312222"
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    }
+  ]
+}

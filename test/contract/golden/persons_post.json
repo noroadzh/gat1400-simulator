@@ -1,0 +1,131 @@
+{
+  "description": "Collection/Persons — POST 2 persons, GET list, GET single, DELETE one, GET shows remaining",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/Persons",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "PersonList": {
+          "PersonObject": [
+            {
+              "PersonID": "41000000005030312001",
+              "PersonName": "张三",
+              "Gender": "male",
+              "IDNumber": "110101199001011234"
+            },
+            {
+              "PersonID": "41000000005030312002",
+              "PersonName": "李四",
+              "Gender": "female",
+              "IDNumber": "310101199502022345"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "ItemCount": 2
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/Persons",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "PersonList": {
+          "PersonObject": [
+            {
+              "PersonID": "41000000005030312001"
+            },
+            {
+              "PersonID": "41000000005030312002"
+            }
+          ]
+        },
+        "Num": 2
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/Persons/41000000005030312001",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "PersonList": {
+          "PersonObject": [
+            {
+              "PersonID": "41000000005030312001",
+              "PersonName": "张三"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "DELETE",
+      "path": "/VIID/Persons/41000000005030312001",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    }
+  ]
+}
