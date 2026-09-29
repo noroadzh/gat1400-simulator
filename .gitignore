@@ -13,3 +13,6 @@
 .vscode/
 /node_modules/
 /web/dist/
+# Frontend SPA output (Change 3 makes this a Vite build artifact;
+# currently it is a hand-written CDN SPA still served via embed.FS)
+/internal/ui/dist/

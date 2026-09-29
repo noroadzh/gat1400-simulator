@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -334,5 +335,39 @@ func TestHub_BroadcastAndClientCount(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 	if srv.hub == nil {
 		t.Fatal("hub is nil")
+	}
+}
+
+func TestAPIPathNotAffectedByFallback(t *testing.T) {
+	// GET /api/control/nodes must return JSON, not the SPA fallback.
+	srv := newTestBFF(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/control/nodes", nil)
+	rec := httptest.NewRecorder()
+	srv.e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Errorf("expected Content-Type application/json, got %s", ct)
+	}
+	body := rec.Body.String()
+	if strings.Contains(body, `id="app"`) {
+		t.Errorf("GET /api/control/nodes returned SPA HTML — SPA fallback leaked into API path")
+	}
+}
+
+func TestWebSocketPathNotAffectedByFallback(t *testing.T) {
+	// GET /ws/events with Upgrade: websocket must not return SPA fallback.
+	srv := newTestBFF(t)
+	req := httptest.NewRequest(http.MethodGet, "/ws/events", nil)
+	req.Header.Set("Connection", "upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	rec := httptest.NewRecorder()
+	srv.e.ServeHTTP(rec, req)
+
+	// Either 101 (if hub upgrades) or 400 (no WS handler in test) — neither should be 200 SPA HTML.
+	if rec.Code == http.StatusOK && strings.Contains(rec.Body.String(), `id="app"`) {
+		t.Errorf("GET /ws/events returned SPA fallback — WS path leaked into SPA catch-all")
 	}
 }

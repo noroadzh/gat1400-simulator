@@ -1,0 +1,118 @@
+:root {
+  --bg-base: #0b1020;
+  --bg-deep: #11183a;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --primary: #5b8cff;
+  --accent: #8a5bff;
+  --success: #3ad29f;
+  --warn: #f7b955;
+  --danger: #ff6b6b;
+  --text-primary: #e6e8f0;
+  --text-muted: #8c93b0;
+  --gradient-primary: linear-gradient(135deg, #5b8cff 0%, #8a5bff 100%);
+  --gradient-success: linear-gradient(135deg, #3ad29f 0%, #5b8cff 100%);
+  --gradient-warn: linear-gradient(135deg, #f7b955 0%, #ff6b6b 100%);
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Inter', 'PingFang SC', system-ui, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-base);
+}
+
+body {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(91, 140, 255, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(138, 91, 255, 0.1) 0%, transparent 45%),
+    linear-gradient(135deg, var(--bg-base) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.glass-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 18px;
+}
+
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Element Plus overrides for dark theme */
+.el-table,
+.el-table tr,
+.el-table th.el-table__cell,
+.el-table td.el-table__cell {
+  background-color: transparent !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background-color: rgba(91, 140, 255, 0.08) !important;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select .el-input__wrapper {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: 0 0 0 1px var(--card-border) !important;
+}
+
+.el-button--primary {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+}
+
+.el-button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(91, 140, 255, 0.4);
+  transition: all 0.2s ease;
+}
+
+.el-tag {
+  border: none !important;
+}
+
+.el-dialog {
+  background: linear-gradient(135deg, #131938 0%, #0f1530 100%) !important;
+  border: 1px solid var(--card-border);
+}
+
+.el-dialog__title {
+  color: var(--text-primary) !important;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(91, 140, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(91, 140, 255, 0.5);
+}

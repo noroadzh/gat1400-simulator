@@ -86,7 +86,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.srv.Shutdown(ctx)
 }
 
-// installRoutes 注册控制面路由（节点管理 / 场景控制 / 抓包查询 / 统计 / 静态资源 / WebSocket）。
+// installRoutes 注册控制面路由（节点管理 / 场景控制 / 抓包查询 / 统计 / WebSocket）。
+//
+// 自 Change 3 起，静态资源由独立的 nginx 容器服务；本服务仅保留 JSON API 与 WebSocket。
 func (s *Server) installRoutes() {
 	api := s.e.Group("/api/control")
 	api.GET("/system/health", s.handleHealth)
@@ -106,12 +108,6 @@ func (s *Server) installRoutes() {
 	api.GET("/captures/export/har", s.handleCaptureExportHAR)
 
 	api.GET("/stats", s.handleStats)
-
-	// Static SPA fallback — Vue app lives under /ui/
-	s.e.GET("/ui/*", echo.WrapHandler(http.StripPrefix("/ui/", http.FileServer(http.FS(uiStaticFS)))))
-	s.e.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusFound, "/ui/")
-	})
 
 	ws := s.e.Group("/ws")
 	ws.GET("/events", s.handleEvents)

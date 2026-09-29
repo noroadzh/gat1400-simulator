@@ -1,0 +1,38 @@
+# ==============================================================================
+# Backend multi-stage build
+# Stage 1: Build the Go binary with CGO disabled (static binary, no libc needed)
+# Stage 2: Run from distroless/static-debian12 (minimal attack surface, no shell)
+# ==============================================================================
+
+# ── Stage 1: Build ─────────────────────────────────────────────────────────────
+FROM golang:1.25-alpine AS build
+
+# Install CA certificates (needed for HTTPS health checks if configured).
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /src
+
+# Copy go.mod / go.sum and download dependencies (layer-cached).
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source and build a static, non-CGO binary.
+COPY . ./
+RUN CGO_ENABLED=0 go build \
+    -ldflags="-s -w" \
+    -trimpath \
+    -o /gat1400-sim \
+    ./cmd/gat1400-sim/
+
+# ── Stage 2: Runtime ────────────────────────────────────────────────────────────
+FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /gat1400-sim /gat1400-sim
+
+WORKDIR /
+USER nonroot:nonroot
+
+EXPOSE 14080
+
+ENTRYPOINT ["/gat1400-sim"]

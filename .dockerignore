@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Build artifacts (not needed inside image)
+**/*.o
+**/*.a
+bin/
+dist/
+
+# Local data and logs
+data/
+*.log
+
+# CI / tooling
+.github/
+.codebuddy/
+.codbuddy/
+openspec/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+nginx.conf
+.dockerignore
+
+# Node (frontend dependencies are installed at build time from package-lock.json)
+web/node_modules/
+web/dist/

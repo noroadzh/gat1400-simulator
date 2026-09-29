@@ -20,13 +20,52 @@
 
 ### Requirement: BFF MUST 在 / 路径服务嵌入的 Vue3 SPA
 
-BFF MUST 在根路径服务内嵌的 `web/dist/` 目录。任意非 API 路径 MUST 回退到 `index.html`（SPA 路由）。
+BFF MUST NOT embed or serve the frontend SPA. The SPA MUST be a standalone Vue 3
+build artifact served by a dedicated nginx container on port 80. The backend (port
+14080) MUST be a pure API + WebSocket server. A reverse proxy MUST route `/api/` and `/ws/`
+to the backend, and all other paths to the SPA.
 
 #### Scenario: 未知前端路径
 
-- **WHEN** 客户端 GET `/nodes`
-- **THEN** 响应 MUST 是内嵌的 `index.html`
+- **WHEN** 客户端 GET `/nodes`（或任何非 `/api/*`、`/ws/*` 的路径）
+- **THEN** 响应 MUST 是 SPA 入口 HTML
 - **AND** Content-Type MUST 为 `text/html`。
+
+#### Scenario: 根路径返回 SPA 入口
+
+- **WHEN** 客户端 GET `/`
+- **THEN** 响应 MUST 是 SPA 入口 HTML
+- **AND** Content-Type MUST 为 `text/html`。
+
+#### Scenario: API 路径不受 SPA fallback 影响
+
+- **WHEN** 客户端 GET `/api/control/nodes`（或任意 `/api/*`、`/ws/*` 路径）
+- **THEN** BFF MUST 直接处理该请求（MUST NOT 回退到 `index.html`）
+- **AND** Content-Type MUST 为 `application/json`。
+
+#### Scenario: WebSocket 路径不受 SPA fallback 影响
+
+- **WHEN** 客户端建立 `ws://host/ws/events`（或任意 `/ws/*` 路径）
+- **THEN** BFF MUST 升级协议为 WebSocket（MUST NOT 回退到 `index.html`）
+
+#### Scenario: Frontend served by nginx, not by BFF
+
+- **WHEN** browser requests any non-API path on the frontend container (e.g. `/`, `/dashboard`)
+- **THEN** nginx returns `index.html` or the matching static asset
+- **AND** the Go binary has no `//go:embed` directive for `internal/ui/dist/`
+
+#### Scenario: API path unaffected by nginx SPA fallback
+
+- **WHEN** frontend requests `/api/control/nodes` on port 8080
+- **THEN** nginx proxies to `http://backend:14080/api/control/nodes`
+- **AND** returns JSON (not the SPA fallback)
+
+#### Scenario: WebSocket path proxied with upgrade headers
+
+- **WHEN** frontend opens `ws://localhost:8080/ws/events`
+- **THEN** nginx proxies to `http://backend:14080/ws/events` with `Upgrade` and `Connection` headers
+
+---
 
 ### Requirement: WebSocket MUST 广播事件到全部已连接客户端
 
@@ -79,6 +118,79 @@ BFF MUST 将全部抓包持久化到 `CaptureStore`，并通过 `/api/control/ca
 
 ---
 
+### Requirement: Frontend Build Pipeline
+
+The frontend MUST be built with Vite and MUST output to `web/dist/`. The nginx container
+MUST be the runtime serving the built SPA, NOT the Go binary.
+
+#### Scenario: npm build produces dist
+
+- **WHEN** developer runs `npm run build` in `web/`
+- **THEN** `web/dist/` contains `index.html` and `assets/` chunks
+- **AND** `index.html` contains a `<script type="module">` tag loading the Vite bundle
+
+#### Scenario: dist is gitignored
+
+- **WHEN** `git status` is run after a build
+- **THEN** `web/dist/` does not appear (it is in `.gitignore`)
+
+### Requirement: Containerization
+
+The project MUST be containerized with Docker multi-stage builds and orchestrated with docker-compose.
+
+#### Scenario: Docker multi-stage frontend build
+
+- **GIVEN** `Dockerfile.frontend` with build stage `node:20-alpine` and runtime stage `nginx:alpine`
+- **WHEN** `docker build -f Dockerfile.frontend .` succeeds
+- **THEN** the image exposes port 80 and serves the SPA at `/`
+
+#### Scenario: Docker multi-stage backend build
+
+- **GIVEN** `Dockerfile.backend` with build stage `golang:1.25-alpine` and runtime stage `gcr.io/distroless/static-debian12`
+- **WHEN** `docker build -f Dockerfile.backend .` succeeds
+- **THEN** the image exposes port 14080 and runs the gat1400-sim binary
+
+#### Scenario: docker-compose orchestration
+
+- **GIVEN** `docker-compose.yml` defines services `frontend` and `backend`
+- **WHEN** `docker-compose up` succeeds
+- **THEN** frontend is reachable at `http://localhost:8080`, backend at `http://localhost:14080`
+- **AND** backend health check passes before frontend starts
+
+### Requirement: CI must verify frontend build
+
+CI MUST run a frontend job on every branch, and the test/build jobs MUST depend on it.
+
+#### Scenario: Frontend CI job
+
+- **WHEN** CI runs
+- **THEN** a `frontend` job runs `npm ci && npm run build && npm run typecheck` in `web/`
+- **AND** uploads `frontend-dist` artifact
+
+#### Scenario: Test job depends on frontend build
+
+- **WHEN** CI runs
+- **THEN** the `test` job has `needs: [frontend]`
+
+### Requirement: nginx SPA fallback and reverse proxy
+
+nginx MUST implement SPA fallback and MUST reverse-proxy API and WebSocket paths.
+
+#### Scenario: SPA fallback on unknown path
+
+- **WHEN** browser requests `/some/unknown/route` on the frontend container
+- **THEN** nginx returns `index.html` with HTTP 200
+
+#### Scenario: API reverse proxy
+
+- **WHEN** browser requests `/api/control/nodes` on port 8080
+- **THEN** nginx proxies to `http://backend:14080/api/control/nodes`
+
+#### Scenario: WebSocket reverse proxy
+
+- **WHEN** browser opens WebSocket `/ws/events` on port 8080
+- **THEN** nginx proxies to `http://backend:14080/ws/events` with HTTP 1.1 upgrade headers
+
 ## ADDED Architecture Decisions
 
 ### Decision: BFF 不包含业务逻辑
@@ -89,6 +201,8 @@ BFF 委派给 `application.NodeService` 与 `application.ScenarioService`。MUST
 
 慢客户端在 30 秒读超时后被断开。被慢客户端丢弃的事件不会回放。避免 Hub 反压阻塞全系统。
 
-### Decision: 前端 bundle 在编译期嵌入
+### Decision: 前端 bundle 在编译期嵌入（当前为 CDN SPA，Change 3 升级为 Vite 构建）
 
-前端构建产物（`web/dist/`）通过 `embed.FS` 嵌入，直接在内存中服务。运行时无需文件系统访问。
+**当前状态**：前端是一个手写的、380 行的 CDN 单文件 SPA（`internal/ui/dist/index.html`），通过 Vue 3、Element Plus 的 CDN 加载，所有 Vue SFC 集成在一个 `<script>` 块中。该 SPA 通过 `//go:embed all:dist` 嵌入二进制。
+
+**未来状态**：Change 3 `vue-componentize-and-dockerize` 将引入 `web/` 项目，使用 Vite + Vue 3 SFC + Element Plus，构建产物继续输出到 `internal/ui/dist/`。docker-compose 部署后 nginx 自服务 SPA，不再通过 BFF embed。
