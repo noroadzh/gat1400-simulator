@@ -1,30 +1,30 @@
-# Proposal: HTTP Client with Digest Auth
+# 提案：带 Digest 认证的 HTTP 客户端
 
-## Status
-Archived — implemented as the protocol client adapter.
+## 状态
+已归档 —— 已实现为协议客户端适配器。
 
-## Motivation
+## 背景动机
 
-The simulator must act as a GAT 1400 **device** (UAC), pushing resources to a platform (UAS) via HTTP. The platform protects `/VIID/System/Register` and `/VIID/System/UnRegister` with HTTP Digest auth. The client must:
+模拟器需要扮演 GA/T 1400 中的 **设备**（UAC），通过 HTTP 向平台（UAS）推送资源。平台对 `/VIID/System/Register` 与 `/VIID/System/UnRegister` 启用了 HTTP Digest 认证。客户端需要：
 
-1. Send a request → receive `401 Unauthorized` with `WWW-Authenticate: Digest realm="...", nonce="...", qop="auth", opaque="..."`
-2. Compute the digest response
-3. Retry the request with `Authorization: Digest ...`
-4. Persist the nonce for reuse within the validity window
+1. 发送请求 → 收到 `401 Unauthorized` 及 `WWW-Authenticate: Digest realm="...", nonce="...", qop="auth", opaque="..."`
+2. 计算 Digest 响应值
+3. 携带 `Authorization: Digest ...` 重试请求
+4. 在 nonce 有效期内持久化以复用
 
-## Goals
+## 目标
 
-- Fully transparent auth: caller sees only the successful response
-- Persistent nonce store (SQLite) survives client restarts
-- `User-Identify` header on every request
-- `Content-Type: application/VIID+JSON` on every request
+- 认证对调用方完全透明：调用方只看到成功的响应
+- nonce 持久化（SQLite），重启后仍然有效
+- 每个请求携带 `User-Identify` 请求头
+- 每个请求携带 `Content-Type: application/VIID+JSON`
 
-## Non-Goals
+## 非目标
 
-- No TLS (handled at deployment level — nginx sidecar)
-- No connection pooling beyond stdlib HTTP transport
-- No multi-part upload
+- 不处理 TLS（由部署层负责——nginx sidecar）
+- 不在 stdlib HTTP transport 之外做连接池
+- 不支持 multipart 上传
 
-## Open Questions
+## 待定问题
 
-None.
+无。
