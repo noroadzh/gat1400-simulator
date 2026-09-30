@@ -1,27 +1,27 @@
-# Proposal: Testing Matrix and Documentation
+# 提案：测试矩阵与文档
 
-## Status
-In Progress — in the process of being completed.
+## 状态
+进行中 —— 正在补齐。
 
-## Motivation
+## 背景动机
 
-The codebase has 100% unit test coverage on internal packages but is missing:
-- **Contract tests**: Golden sample recordings that verify protocol correctness against real wire dumps
-- **End-to-end tests**: Real socket dual-process tests that run the full stack (device client → server → DB)
-- **Documentation**: ARCHITECTURE.md, PROTOCOL.md, USER_GUIDE.md, OPERATIONS.md, TESTING.md, CHANGELOG.md
+代码库在内部包上已有 100% 单元测试覆盖率，但仍然缺失：
+- **合约测试**：用于核对真实抓包下的协议正确性的 Golden sample 录制
+- **端到端测试**：跑通完整栈（设备客户端 → 服务器 → 数据库）的真实 socket 双进程测试
+- **文档**：`ARCHITECTURE.md`、`PROTOCOL.md`、`USER_GUIDE.md`、`OPERATIONS.md`、`TESTING.md`、`CHANGELOG.md`
 
-## Goals
+## 目标
 
-- `test/contract/golden/` — JSON files with request/response pairs for key protocol sequences
-- `test/e2e/` — Go e2e tests that start a real protocol server and exercise it with the real client
-- All 6 documentation files in `docs/`
+- `test/contract/golden/` —— 关键协议序列的请求/响应对应 JSON 文件
+- `test/e2e/` —— 启动真实协议服务器并用真实客户端跑通它的 Go e2e 测试
+- `docs/` 下 6 份文档全部到位
 
-## Non-Goals
+## 非目标
 
-- No performance benchmarks (deferred)
-- No load/stress testing (deferred to OPERATIONS)
-- No documentation for internal implementation details
+- 不做性能基准（推迟）
+- 不做负载/压力测试（推迟到 OPERATIONS）
+- 不为内部实现细节写文档
 
-## Open Questions
+## 待定问题
 
-None.
+无。

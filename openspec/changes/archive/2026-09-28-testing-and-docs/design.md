@@ -1,16 +1,16 @@
-# Design: Testing Matrix and Documentation
+# 设计：测试矩阵与文档
 
-## Golden Samples (test/contract/golden/)
+## Golden 样本（test/contract/golden/）
 
 ```
 test/contract/golden/
-├── register.json       # Digest handshake: 401 → Digest response → 200
+├── register.json       # Digest 握手：401 → Digest 应答 → 200
 ├── persons_post.json   # POST /VIID/Persons → 200 with ItemCount
 ├── subscribes.json     # Subscribe CRUD → 200
 └── catalog.json        # GET /VIID/APEs → 200 with non-empty APEObject
 ```
 
-Each JSON file is a self-contained HTTP interaction:
+每个 JSON 文件是一个自洽的 HTTP 交互：
 
 ```json
 {
@@ -32,46 +32,46 @@ Each JSON file is a self-contained HTTP interaction:
 }
 ```
 
-The golden test runner:
-1. Loads `*.json` files
-2. Starts a real protocol server in-process
-3. Replays the steps
-4. Compares response status codes and body structure
+Golden 测试运行器：
+1. 加载 `*.json` 文件
+2. 在进程内启动一个真实的协议服务器
+3. 回放其中的步骤
+4. 比对响应状态码与 body 结构
 
-Discrepancies are reported as failures.
+不一致将被报告为失败。
 
-## E2E Tests (test/e2e/)
+## E2E 测试（test/e2e/）
 
 ```
 test/e2e/
-├── protocol_e2e_test.go   # Dual-process: start binary + client
-└── capture_e2e_test.go    # Capture middleware end-to-end
+├── protocol_e2e_test.go   # 双进程：启动二进制 + 客户端
+└── capture_e2e_test.go    # Capture 中间件端到端
 ```
 
 ```go
 // protocol_e2e_test.go
 func TestProtocolE2E_RegisterAndPush(t *testing.T) {
-    // 1. Start a fresh protocol server (httptest.Server or real TCP listener)
-    // 2. Create a wire.Client targeting that server
-    // 3. Client.Register() → expect 200
-    // 4. Client.PostJSON("/VIID/Persons", person) → expect 200
-    // 5. Query server's ResourceStore → expect 1 person
+    // 1. 启动一个全新的协议服务器（httptest.Server 或真实 TCP listener）
+    // 2. 创建一个 wire.Client 指向该服务器
+    // 3. Client.Register() → 期望 200
+    // 4. Client.PostJSON("/VIID/Persons", person) → 期望 200
+    // 5. 查询服务器的 ResourceStore → 期望 1 条 person
 }
 ```
 
-E2E tests use `net.Listen` (real TCP) to test the full HTTP stack including middleware, header parsing, and body reading.
+E2E 测试使用 `net.Listen`（真实 TCP）来测试完整的 HTTP 栈，包括中间件、header 解析与 body 读取。
 
-## Documentation
+## 文档
 
-All documentation lives in `docs/`:
+所有文档都放在 `docs/` 下：
 
-| File | Content |
+| 文件 | 内容 |
 |---|---|
-| `ARCHITECTURE.md` | System overview, component diagram, data flow |
-| `PROTOCOL.md` | GAT 1400.4 protocol reference: routes, request/response shapes, error codes |
-| `USER_GUIDE.md` | Quick start, config file format, YAML scenario syntax |
-| `OPERATIONS.md` | Deployment, TLS, monitoring, logging, upgrade |
-| `TESTING.md` | How to run tests, golden samples, e2e, CI |
-| `CHANGELOG.md` | Per-version release notes (mirrors openspec/CHANGELOG.md) |
+| `ARCHITECTURE.md` | 系统概览、组件图、数据流 |
+| `PROTOCOL.md` | GAT 1400.4 协议参考：路由、请求/响应形态、错误码 |
+| `USER_GUIDE.md` | 快速上手、配置文件格式、YAML 场景语法 |
+| `OPERATIONS.md` | 部署、TLS、监控、日志、升级 |
+| `TESTING.md` | 如何运行测试、golden 样本、e2e、CI |
+| `CHANGELOG.md` | 逐版本发布说明（与 openspec/CHANGELOG.md 同步） |
 
-The `docs/CHANGELOG.md` is auto-generated from `openspec/CHANGELOG.md` by a `make sync-changelog` target.
+`docs/CHANGELOG.md` 通过 `make sync-changelog` 目标由 `openspec/CHANGELOG.md` 自动生成。
