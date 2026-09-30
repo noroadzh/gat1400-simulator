@@ -1,59 +1,59 @@
 ## ADDED Requirements
 
-### Requirement: BFF MUST expose control REST API under /api/control/
+### Requirement: BFF MUST 暴露位于 /api/control/ 下的控制面 REST API
 
-All control-plane endpoints MUST be under the `/api/control/` prefix. The protocol server (`/VIID/...`) MUST be served from a different port.
+所有控制面端点 MUST 位于 `/api/control/` 前缀之下。协议服务器（`/VIID/...`）MUST 在不同端口上提供服务。
 
-#### Scenario: Different ports
-WHEN the simulator is started with default config
-THEN `:19000` MUST serve the BFF (control plane)
-AND `:19001` MUST serve the protocol server (VIID).
+#### Scenario: 不同端口
+WHEN 模拟器以默认配置启动
+THEN `:19000` MUST 提供 BFF（控制面）
+AND `:19001` MUST 提供协议服务器（VIID）。
 
-### Requirement: BFF MUST serve the embedded Vue3 SPA at /
+### Requirement: BFF MUST 在 / 下提供嵌入的 Vue3 SPA
 
-The BFF MUST serve the embedded `web/dist/` directory at the root path. Any non-API path MUST fall back to `index.html` (SPA routing).
+BFF MUST 在根路径下提供嵌入的 `web/dist/` 目录。任何非 API 路径 MUST 回退到 `index.html`（SPA 路由）。
 
-#### Scenario: Unknown frontend path
-WHEN a client GETs `/nodes`
-THEN the response MUST be the embedded `index.html`
-AND the Content-Type MUST be `text/html`.
+#### Scenario: 未知的前端路径
+WHEN 客户端 GET `/nodes`
+THEN 响应 MUST 为嵌入的 `index.html`
+AND Content-Type MUST 为 `text/html`。
 
-### Requirement: WebSocket MUST broadcast events to connected clients
+### Requirement: WebSocket MUST 向已连接客户端广播事件
 
-When an event is published to the hub, all connected WebSocket clients MUST receive it within 100ms.
+当一个事件被发布到 hub 时，所有已连接的 WebSocket 客户端 MUST 在 100ms 内收到该事件。
 
-#### Scenario: Node status change
-WHEN a node's status changes from `online` to `stopped`
-THEN all connected WebSocket clients MUST receive an event of type `node.status` with the updated node's `id` and `status`.
+#### Scenario: 节点状态变化
+WHEN 一个节点的状态从 `online` 变为 `stopped`
+THEN 所有已连接的 WebSocket 客户端 MUST 收到类型为 `node.status` 的事件，其中携带该节点的 `id` 与 `status`。
 
-### Requirement: BFF MUST return JSON responses
+### Requirement: BFF MUST 返回 JSON 响应
 
-All REST endpoints MUST return `Content-Type: application/json`. Responses MUST be wrapped in `{items: [...]}` for lists or `{...object...}` for single objects.
+所有 REST 端点 MUST 返回 `Content-Type: application/json`。列表响应 MUST 包成 `{items: [...]}`，单个对象响应 MUST 为 `{...object...}`。
 
-### Requirement: BFF MUST validate node creation payloads
+### Requirement: BFF MUST 校验创建节点的 payload
 
-When a POST to `/api/control/nodes` is missing required fields (`id`, `name`, `role`), the response MUST be `400 Bad Request` with a descriptive error message.
+当 POST `/api/control/nodes` 缺少必填字段（`id`、`name`、`role`）时，响应 MUST 为 `400 Bad Request` 并给出描述性错误信息。
 
-### Requirement: BFF MUST persist captures and serve them on demand
+### Requirement: BFF MUST 持久化捕获并按需提供
 
-The BFF MUST persist all captures to the `CaptureStore` and expose them via `/api/control/captures`. The query MUST support `limit`, `nodeId`, `method`, `path` filters.
+BFF MUST 将所有捕获持久化到 `CaptureStore`，并通过 `/api/control/captures` 提供。查询 MUST 支持 `limit`、`nodeId`、`method`、`path` 过滤。
 
-### Requirement: BFF MUST support JSONL and HAR exports
+### Requirement: BFF MUST 支持 JSONL 与 HAR 导出
 
-Endpoints `/api/control/captures/export/jsonl` and `/api/control/captures/export/har` MUST return a `200 OK` body with `{path, count}`. The path MUST be a writable file on the local filesystem.
+端点 `/api/control/captures/export/jsonl` 与 `/api/control/captures/export/har` MUST 返回 `200 OK`，body 为 `{path, count}`。其中 path MUST 是本地文件系统上的可写文件。
 
 ---
 
 ## ADDED Architecture Decisions
 
-### Decision: BFF does not own business logic
+### Decision: BFF 不持有业务逻辑
 
-The BFF delegates to `application.NodeService` and `application.ScenarioService`. It MUST NOT directly call `adapter/storage` or `adapter/httpapi`. This keeps the BFF thin.
+BFF 委托给 `application.NodeService` 与 `application.ScenarioService`。它 MUST NOT 直接调用 `adapter/storage` 或 `adapter/httpapi`。这使 BFF 保持薄层。
 
-### Decision: WebSocket events are best-effort
+### Decision: WebSocket 事件尽力而为
 
-Slow clients are disconnected after a 30-second read deadline. Events dropped due to a slow client are NOT replayed. This prevents hub backpressure from blocking the entire system.
+慢客户端在 30 秒读超期后被断开。由于慢客户端而被丢弃的事件 NOT 会被回放。这避免了 hub 的反压阻塞整个系统。
 
-### Decision: Frontend bundle is embedded at compile time
+### Decision: 前端 bundle 在编译期嵌入
 
-The frontend build artifact (`web/dist/`) is embedded via `embed.FS` and served directly from memory. No filesystem access is needed at runtime.
+前端构建产物（`web/dist/`）通过 `embed.FS` 嵌入并直接从内存提供。运行时不需要文件系统访问。

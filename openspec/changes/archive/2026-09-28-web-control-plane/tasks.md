@@ -1,66 +1,66 @@
-## Tasks
+## 任务
 
-### Task: BFF Server skeleton
+### 任务：BFF Server 骨架
 
-- [x] `internal/ui/server.go` — `Server` struct, `NewServer`, `Start`, `Shutdown`
-- [x] Configure echo with default middleware (Logger, Recover, CORS)
+- [x] `internal/ui/server.go` —— `Server` 结构体、`NewServer`、`Start`、`Shutdown`
+- [x] 配置 echo 的默认中间件（Logger、Recover、CORS）
 
-### Task: System endpoints
+### 任务：System 端点
 
-- [x] `GET /api/control/system/health` — returns service info
-- [x] `GET /api/control/system/info` — returns revision, Go version, uptime
-- [x] `GET /api/control/stats` — aggregate counts
+- [x] `GET /api/control/system/health` —— 返回服务信息
+- [x] `GET /api/control/system/info` —— 返回 revision、Go version、uptime
+- [x] `GET /api/control/stats` —— 聚合计数
 
-### Task: Nodes endpoints
+### 任务：Nodes 端点
 
 - [x] `GET/POST/DELETE /api/control/nodes`
 - [x] `GET /api/control/nodes/:id`
-- [x] Bindings: `bindNode` for JSON → domain.Node conversion
+- [x] 绑定：JSON → domain.Node 转换的 `bindNode`
 
-### Task: Scenarios endpoints
+### 任务：Scenarios 端点
 
 - [x] `GET /api/control/scenarios`
 - [x] `GET /api/control/scenarios/:id`
 - [x] `POST /api/control/scenarios/:id/start|stop`
 
-### Task: Resources endpoints
+### 任务：Resources 端点
 
-- [x] `GET /api/control/resources/:kind` — read from `httpapi.ResourceStore`
+- [x] `GET /api/control/resources/:kind` —— 读取自 `httpapi.ResourceStore`
 
-### Task: Subscriptions endpoints
+### 任务：Subscriptions 端点
 
 - [x] `GET/POST/PUT/DELETE /api/control/subscriptions`
 
-### Task: Captures endpoints
+### 任务：Captures 端点
 
 - [x] `GET /api/control/captures?limit=N`
 - [x] `GET /api/control/captures/export/jsonl`
 - [x] `GET /api/control/captures/export/har`
 
-### Task: WebSocket Hub
+### 任务：WebSocket Hub
 
-- [x] `internal/ui/hub.go` — Hub with broadcaster, Register/Unregister clients
-- [x] `internal/ui/api_control.go::handleWS` — upgrade connection, register with hub
+- [x] `internal/ui/hub.go` —— 带广播器的 Hub，Register/Unregister 客户端
+- [x] `internal/ui/api_control.go::handleWS` —— 升级连接，注册进 hub
 
-### Task: Frontend embedding
+### 任务：前端嵌入
 
-- [x] `frontend.go` — `embed.FS` for `web/dist/`
+- [x] `frontend.go` —— `web/dist/` 的 `embed.FS`
 - [x] SPA fallback handler
 
-### Task: Frontend build
+### 任务：前端构建
 
-- [x] `web/package.json` — Vue 3 + ElementPlus + Vite
-- [x] `web/vite.config.ts` — output to `web/dist/`
-- [x] 6 page components: Dashboard, Nodes, Scenarios, Resources, Subscriptions, Captures
+- [x] `web/package.json` —— Vue 3 + ElementPlus + Vite
+- [x] `web/vite.config.ts` —— 输出到 `web/dist/`
+- [x] 6 个页面组件：Dashboard、Nodes、Scenarios、Resources、Subscriptions、Captures
 
-### Task: Unit tests
+### 任务：单元测试
 
-- [x] `internal/ui/server_test.go` — all BFF endpoints
-- [x] Cover health, info, stats, CRUD round-trip, export endpoints
-- [x] Cover hub broadcast mechanism
+- [x] `internal/ui/server_test.go` —— 覆盖全部 BFF 端点
+- [x] 覆盖 health、info、stats、CRUD 往返、导出端点
+- [x] 覆盖 hub 广播机制
 
-### Verification
+### 验证
 
-- `pnpm build` in `web/` produces `dist/`
+- 在 `web/` 下 `pnpm build` 产出 `dist/`
 - `go test ./internal/ui/...` → exit 0
-- Browser can load `http://localhost:19000/` and see the dashboard
+- 浏览器可加载 `http://localhost:19000/` 并看到 dashboard

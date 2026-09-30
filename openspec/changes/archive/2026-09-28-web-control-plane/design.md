@@ -1,40 +1,40 @@
-# Design: Web Control Plane
+# 设计：Web 控制面
 
-## BFF Layout
+## BFF 布局
 
 ```
 internal/ui/
-├── server.go          # Server struct, BFF lifecycle, route registration
-├── api_control.go     # All REST handlers under /api/control/
-├── hub.go             # WebSocket hub, broadcaster, client registry
-├── api_bindings.go     # JSON ↔ domain model bindings for BFF requests
-└── frontend.go        # embed.FS handler for Vue3 SPA
+├── server.go          # Server 结构体、BFF 生命周期、路由注册
+├── api_control.go     # /api/control/ 下的全部 REST handler
+├── hub.go             # WebSocket Hub、广播器、客户端注册
+├── api_bindings.go    # BFF 请求的 JSON ↔ 领域模型绑定
+└── frontend.go        # Vue3 SPA 的 embed.FS handler
 ```
 
-## REST Routes
+## REST 路由
 
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/control/system/health` | GET | `{status, service, version}` |
 | `/api/control/system/info` | GET | `{revision, goVersion, uptime}` |
-| `/api/control/stats` | GET | Aggregate counts: nodes, scenarios, resources |
-| `/api/control/nodes` | GET | List all nodes |
-| `/api/control/nodes` | POST | Create node |
-| `/api/control/nodes/:id` | GET | Get node |
-| `/api/control/nodes/:id` | DELETE | Remove node |
-| `/api/control/scenarios` | GET | List scenarios |
-| `/api/control/scenarios/:id` | GET | Get scenario |
-| `/api/control/scenarios/:id/start` | POST | Start scenario |
-| `/api/control/scenarios/:id/stop` | POST | Stop scenario |
-| `/api/control/resources/:kind` | GET | Browse resource collection |
-| `/api/control/subscriptions` | GET/POST/PUT/DELETE | Manage subscriptions |
-| `/api/control/captures?limit=N` | GET | Recent captures |
-| `/api/control/captures/export/jsonl` | GET | Download JSONL |
-| `/api/control/captures/export/har` | GET | Download HAR |
+| `/api/control/stats` | GET | 聚合计数：nodes、scenarios、resources |
+| `/api/control/nodes` | GET | 列出全部节点 |
+| `/api/control/nodes` | POST | 创建节点 |
+| `/api/control/nodes/:id` | GET | 获取节点 |
+| `/api/control/nodes/:id` | DELETE | 删除节点 |
+| `/api/control/scenarios` | GET | 列出场景 |
+| `/api/control/scenarios/:id` | GET | 获取场景 |
+| `/api/control/scenarios/:id/start` | POST | 启动场景 |
+| `/api/control/scenarios/:id/stop` | POST | 停止场景 |
+| `/api/control/resources/:kind` | GET | 浏览资源集合 |
+| `/api/control/subscriptions` | GET/POST/PUT/DELETE | 管理订阅 |
+| `/api/control/captures?limit=N` | GET | 最近捕获 |
+| `/api/control/captures/export/jsonl` | GET | 下载 JSONL |
+| `/api/control/captures/export/har` | GET | 下载 HAR |
 
 ## WebSocket Hub
 
-A single endpoint `/api/control/ws` accepts WebSocket upgrades. The server maintains a list of connected clients and broadcasts events:
+一个端点 `/api/control/ws` 接受 WebSocket 升级。服务器维护一份已连接客户端列表并广播事件：
 
 ```go
 type Event struct {
@@ -43,46 +43,46 @@ type Event struct {
 }
 ```
 
-Events are emitted by:
-- `nodeSvc.SetSyncHook` — node status changes
-- `httpapi.CaptureMiddleware` — capture stored
-- `scenSvc` — scenario start/stop
-- Cascade notification handler — alert/disposition match
+事件来源：
+- `nodeSvc.SetSyncHook` —— 节点状态变化
+- `httpapi.CaptureMiddleware` —— 捕获已存储
+- `scenSvc` —— 场景启停
+- 级联通知 handler —— 告警/处置匹配
 
-The hub uses a mutex-protected slice; broadcasts are non-blocking (channel per client).
+Hub 使用 mutex 保护的切片；广播是非阻塞的（每个客户端一个 channel）。
 
-## Frontend Embedding
+## 前端嵌入
 
 ```go
 //go:embed all:dist
 var distFS embed.FS
 ```
 
-The frontend is built with `pnpm build` to `web/dist/`, which is embedded at compile time. The BFF serves `dist/` at `/` with SPA fallback (any unknown path returns `index.html`).
+前端由 `pnpm build` 构建到 `web/dist/`，在编译期被嵌入。BFF 在 `/` 下提供 `dist/`，并带有 SPA fallback（任何未知路径返回 `index.html`）。
 
-## Frontend Pages
+## 前端页面
 
-1. **Dashboard** — Health card, node counts, scenario counts, recent activity feed (live)
-3. **Scenarios** — Cards listing scenarios, status badges, start/stop buttons
-4. **Nodes** — Table of nodes with status, capabilities, actions (delete, view)
-5. **Resources** — Tabbed list of resource collections, with type/kind filter
-6. **Subscriptions** — List and create subscriptions, edit criteria
-7. **Captures** — Paginated table of recent captures with method/path/status filter; "view" opens a side panel showing request/response bodies
+1. **Dashboard** —— 健康卡片、节点计数、场景计数、最近活动流（实时）
+3. **Scenarios** —— 场景卡片列表、状态徽章、启停按钮
+4. **Nodes** —— 节点表格，含状态、能力、操作（删除、查看）
+5. **Resources** —— 资源集合的 Tab 化列表，支持 type/kind 过滤
+6. **Subscriptions** —— 列出与创建订阅，编辑判定条件
+7. **Captures** —— 最近捕获的分页表格，含 method/path/status 过滤；"view" 打开侧边面板显示请求/响应 body
 
-The frontend uses ElementPlus components (Table, Tag, Dialog, Form, Tabs).
+前端使用 ElementPlus 组件（Table、Tag、Dialog、Form、Tabs）。
 
-## Lifecycle
+## 生命周期
 
 ```
 Server.Start(addr string) error
-  ├── Starts echo in goroutine
-  ├── Starts hub goroutine
-  └── Returns immediately
+  ├── 在 goroutine 中启动 echo
+  ├── 启动 hub goroutine
+  └── 立即返回
 
 Server.Shutdown(ctx context.Context) error
-  ├── Shutdown echo (drains HTTP requests)
-  ├── Closes hub (drains WS clients)
-  └── Returns
+  ├── 关闭 echo（排空 HTTP 请求）
+  ├── 关闭 hub（排空 WS 客户端）
+  └── 返回
 ```
 
-The BFF listens on `:19000` by default. The protocol server listens on `:19001`.
+BFF 默认监听 `:19000`。协议服务器监听 `:19001`。
