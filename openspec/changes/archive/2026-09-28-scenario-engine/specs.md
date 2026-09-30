@@ -1,57 +1,57 @@
 ## ADDED Requirements
 
-### Requirement: Scenario MUST be loadable from YAML
+### Requirement: Scenario 必须可以从 YAML 加载
 
-The `LoadAll(dir)` method MUST read all `*.yaml` files in the directory and parse them into `Scenario` values. Files with malformed YAML MUST cause an error.
+`LoadAll(dir)` 方法必须读取目录下全部 `*.yaml` 文件并解析为 `Scenario` 值。YAML 畸形的文件必须导致报错。
 
-#### Scenario: Valid YAML file
-WHEN `LoadAll(dir)` is called on a directory containing one valid YAML file
-THEN it MUST return a slice with one element.
+#### Scenario: 合法的 YAML 文件
+WHEN 对包含一个合法 YAML 文件的目录调用 `LoadAll(dir)`
+THEN 必须返回含一个元素的切片。
 
-#### Scenario: Malformed YAML
-WHEN `LoadAll(dir)` is called on a directory containing a malformed YAML file
-THEN it MUST return an error.
+#### Scenario: 畸形的 YAML
+WHEN 对包含一个畸形 YAML 文件的目录调用 `LoadAll(dir)`
+THEN 必须返回 error。
 
-### Requirement: Scenario MUST support four resource Kinds
+### Requirement: Scenario 必须支持四类以上资源 Kind
 
-Each Scenario MUST be able to declare resources of Kinds: Person, Face, Vehicle, Plate, NonMotorVehicle, Image, Object.
+每个 Scenario 必须能声明如下 Kind 的资源：Person、Face、Vehicle、Plate、NonMotorVehicle、Image、Object。
 
-### Requirement: Each Node MUST produce exactly one runnable
+### Requirement: 每个 Node 必须恰好产出一个 runnable
 
-For each `NodeSpec` in the YAML, the engine MUST produce exactly one `Runnable`. The Runnable's `Start` MUST spawn at most one goroutine per resource declaration.
+对 YAML 中的每条 `NodeSpec`，引擎必须恰好产出一个 `Runnable`。Runnable 的 `Start` 必须为每条资源声明最多启动一个 goroutine。
 
-### Requirement: ScenarioEngine.Start MUST respect autoStart
+### Requirement: ScenarioEngine.Start 必须遵循 autoStart
 
-When `ScheduleSpec.AutoStart=true`, calling `engine.AutoStart(ctx)` MUST start that scenario. When false, the scenario MUST NOT be started automatically.
+当 `ScheduleSpec.AutoStart=true` 时，调用 `engine.AutoStart(ctx)` 必须启动该场景。为 false 时，该场景不得被自动启动。
 
-### Requirement: ResourceFactory MUST produce deterministic IDs
+### Requirement: ResourceFactory 必须产出确定性的 ID
 
-For a given `seed` and `seq`, the factory MUST produce the same `Resource.ID` on every invocation. This is critical for golden sample tests.
+对给定的 `seed` 与 `seq`，工厂每次调用必须产出相同的 `Resource.ID`。这对 golden sample 测试至关重要。
 
-### Requirement: FaultInjector MUST be probabilistic and reproducible
+### Requirement: FaultInjector 必须是概率化且可复现的
 
-For a given seed, the same target MUST produce the same fault decisions across runs (using `math/rand` with explicit seed per target).
+对给定的 seed，同一 target 在多次运行中必须产生相同的故障决策（按 target 使用显式种子的 `math/rand`）。
 
-### Requirement: Engine MUST support engine-less operation
+### Requirement: 引擎必须支持无引擎运行
 
-When constructed with a nil `Runnable` factory (e.g., for testing), `Start` MUST mark the scenario as running but MUST NOT spawn any goroutines. `IsRunning(id)` MUST still return true.
+当以 nil 的 `Runnable` 工厂构造（如测试用）时，`Start` 必须把场景标记为 running，但不得启动任何 goroutine。`IsRunning(id)` 仍必须返回 true。
 
-### Requirement: Engine MUST support Start/Stop on unregistered scenario
+### Requirement: 引擎必须支持对未注册场景的 Start/Stop
 
-`Start(unknownID)` MUST return `ErrScenarioNotFound`.
+`Start(unknownID)` 必须返回 `ErrScenarioNotFound`。
 
 ---
 
 ## ADDED Architecture Decisions
 
-### Decision: YAML is the source of truth for scenarios
+### Decision: YAML 是场景的唯一事实来源
 
-Scenarios are defined in YAML files, not Go code. This allows operations to swap scenarios without recompiling.
+场景定义在 YAML 文件中，而不是 Go 代码里。这让运维可以在不重编译的情况下替换场景。
 
-### Decision: Engine does not own HTTP servers
+### Decision: 引擎不持有 HTTP server
 
-Each Node's HTTP server (when it acts as a platform) is started by the simulator's main bootstrap, not by the engine. The engine only drives client-side behavior (Register, push resources).
+每个节点的 HTTP server（当它作为平台时）由模拟器的主引导启动，而非引擎。引擎只驱动客户端侧行为（Register、推送资源）。
 
-### Decision: ResourceFactory defaults to Fake
+### Decision: ResourceFactory 默认为 Fake
 
-If a scenario omits the `factory:` key, `FakeFactory` is used. This keeps scenarios minimal.
+如果场景省略 `factory:` 键，则使用 `FakeFactory`。这让场景文件保持精简。

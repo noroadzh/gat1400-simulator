@@ -1,10 +1,10 @@
-# Design: Scenario Engine
+# 设计：场景引擎
 
-## Scenario YAML Format
+## Scenario YAML 格式
 
 ```yaml
 id: small-town-v1
-name: Small town — 3 cameras, 1 platform
+name: 小镇 —— 3 路摄像头 + 1 个平台
 schedule:
   autoStart: true
   interval: 30s
@@ -74,16 +74,16 @@ faults:
     probability: 0.05
 ```
 
-## Engine Structure
+## 引擎结构
 
 ```go
 type ScenarioEngine struct {
-    log      *slog.Logger
-    factory  ResourceFactory
-    faults   FaultInjector
-    nodes    []Node
+    log       *slog.Logger
+    factory   ResourceFactory
+    faults    FaultInjector
+    scenarios map[string]Scenario
     runnables map[string]Runnable
-    running   map[id]bool
+    running   map[string]bool
 }
 
 type Runnable interface {
@@ -92,13 +92,13 @@ type Runnable interface {
 }
 ```
 
-The engine does not own HTTP servers directly. Instead, each `Node` declaration produces a "runnable" that:
-1. Spawns an HTTP client (`adapter/wire.Client`) configured with `Upstream`
-2. Calls `Register` at startup
-3. Schedules a `time.Ticker` for each `Resource` declaration
-4. For each tick, generates a Resource via `ResourceFactory` and POSTs via the client
+引擎并不直接持有 HTTP server。每个 `Node` 声明产出一个 "runnable"，它会：
+1. 启动一个按 `Upstream` 配置的 HTTP 客户端（`adapter/wire.Client`）
+2. 启动时调用 `Register`
+3. 为每条 `Resource` 声明调度一个 `time.Ticker`
+4. 每 tick 时通过 `ResourceFactory` 生成 Resource，并由客户端 POST 出去
 
-## Resource Factory
+## 资源工厂
 
 ```go
 type ResourceFactory interface {
@@ -106,14 +106,14 @@ type ResourceFactory interface {
 }
 ```
 
-`FakeFactory` produces random values:
-- Person: random ID (UUID), random gender, random age (18-90), random ethnicity
-- Face: random face ID, parent Person reference, fake JPEG bytes (or empty)
-- Vehicle: random plate, random color, random brand
-- Plate: random 6-char Chinese plate
-- Image: random JPEG header bytes (or empty)
+`FakeFactory` 产出随机值：
+- Person：随机 ID（UUID）、随机性别、随机年龄（18–90）、随机民族
+- Face：随机 face ID、父 Person 引用、伪 JPEG 字节（或空）
+- Vehicle：随机号牌、随机颜色、随机品牌
+- Plate：随机的 6 位中国车牌
+- Image：随机 JPEG 头字节（或空）
 
-## Fault Injector
+## 故障注入器
 
 ```go
 type FaultInjector interface {
@@ -128,13 +128,13 @@ type FaultDecision struct {
 }
 ```
 
-`ProbabilityFaultInjector` uses a seeded RNG per target so that the fault behavior is reproducible across runs (useful for golden sample tests).
+`ProbabilityFaultInjector` 为每个 target 使用独立的种子 RNG，从而保证故障行为在多次运行间可复现（便于 golden sample 测试）。
 
-## Lifecycle
+## 生命周期
 
-1. `engine.LoadAll(scenariosDir)` → reads YAML files into memory
-2. `engine.Scenarios()` → returns the loaded scenarios
-3. `engine.Start(ctx, s)` → starts the default ConfigNode, then all enabled Client nodes
-4. `engine.Stop(id)` → gracefully stops the ConfigNode and Clients
+1. `engine.LoadAll(scenariosDir)` → 把 YAML 文件读到内存
+3. `engine.Scenarios()` → 返回已加载的场景列表
+2. `engine.Start(ctx, s)` → 启动默认的 ConfigNode，再启动所有启用的 Client 节点
+4. `engine.Stop(id)` → 优雅停止 ConfigNode 与 Clients
 
-The engine DOES NOT implement graph loops. A loop in the scenario YAML is a user mistake.
+引擎 MUST NOT 识别图中的环路。YAML 中的环是用户失误。
