@@ -1,54 +1,54 @@
 ## ADDED Requirements
 
-### Requirement: The project MUST compile without errors
+### Requirement: 项目 MUST 无错误编译
 
-When `go build ./cmd/...` is executed on a clean checkout with Go 1.21+, the build MUST complete with exit code 0 and produce at least one binary in `bin/`.
+在干净检出的代码上用 Go 1.21+ 执行 `go build ./cmd/...` 时，构建 MUST 以退出码 0 完成，并在 `bin/` 下产出至少一个二进制。
 
-### Requirement: The test suite MUST pass
+### Requirement: 测试套件 MUST 通过
 
-When `go test ./...` is executed, all tests MUST pass with exit code 0. The `-race` flag MUST be used in CI to detect data races.
+执行 `go test ./...` 时，全部测试 MUST 以退出码 0 通过。CI 中 MUST 使用 `-race` 标志以检测数据竞争。
 
-### Requirement: golangci-lint MUST report no errors
+### Requirement: golangci-lint MUST 报告零错误
 
-When `golangci-lint run ./...` is executed, there MUST be zero linter errors reported.
+执行 `golangci-lint run ./...` 时，MUST 报告零个 linter 错误。
 
-### Requirement: All private packages MUST reside under internal/
+### Requirement: 所有私有包 MUST 位于 internal/ 之下
 
-No package outside of `cmd/` or `test/` MAY import `internal/` packages. This constraint MUST be enforced by CI (golangci-lint `exported` rule checks).
+`cmd/` 与 `test/` 之外的任何包 MUST NOT 导入 `internal/` 下的包。该约束 MUST 由 CI 强制（golangci-lint 的 `exported` 规则检查）。
 
-### Requirement: SQLite dependency MUST be pure-Go
+### Requirement: SQLite 依赖 MUST 是纯 Go 实现
 
-The project MUST use `modernc.org/sqlite` as its SQLite driver. Any import of `database/sql` with `github.com/mattn/go-sqlite3` MUST cause a build failure.
+项目 MUST 使用 `modernc.org/sqlite` 作为 SQLite 驱动。任何 `database/sql` 搭配 `github.com/mattn/go-sqlite3` 的导入 MUST 导致构建失败。
 
-### Requirement: Makefile MUST provide standard targets
+### Requirement: Makefile MUST 提供标准目标
 
-The Makefile MUST define targets `build`, `test`, `lint`, `run`, and `clean`. Each target MUST execute the corresponding standard Go or toolchain command.
+Makefile MUST 定义 `build`、`test`、`lint`、`run`、`clean` 目标。每个目标 MUST 执行对应的标准 Go 或工具链命令。
 
-### Requirement: GitHub Actions CI MUST run on every push
+### Requirement: GitHub Actions CI MUST 在每次 push 时运行
 
-A workflow file at `.github/workflows/ci.yml` MUST trigger on `push` and `pull_request` to branches `main` and `release/**`. The workflow MUST run lint, test, and build steps in that order.
+`.github/workflows/ci.yml` 中的工作流 MUST 在对 `main` 与 `release/**` 分支的 `push` 和 `pull_request` 时触发。工作流 MUST 按 lint、test、build 的顺序执行。
 
-### Requirement: Go module version MUST be declared as 1.21+
+### Requirement: Go 模块版本 MUST 声明为 1.21+
 
-The `go.mod` file MUST contain `go 1.21` or higher to ensure access to slog, range-over-func, and generics.
+`go.mod` 文件 MUST 包含 `go 1.21` 或更高版本，以确保能够使用 slog、range-over-func 与泛型。
 
 ---
 
 ## ADDED Architecture Decisions
 
-### Decision: Hexagonal Architecture
+### Decision: 六边形架构
 
-The codebase MUST be organized into three layers:
-- **domain/**: Pure domain models, no external dependencies.
-- **app/**: Application services, depends only on domain and ports (interfaces).
-- **adapter/**: Infrastructure adapters (HTTP server, HTTP client, SQLite storage), depends on domain, app, and external libraries.
+代码库 MUST 划分为三层：
+- **domain/**：纯领域模型，无外部依赖。
+- **app/**：应用服务，仅依赖 domain 与 ports（接口）。
+- **adapter/**：基础设施适配器（HTTP 服务端、HTTP 客户端、SQLite 存储），依赖 domain、app 与外部库。
 
-This separation MUST be verified by ensuring `internal/app/` contains no imports from `internal/adapter/`.
+该分层 MUST 通过确保 `internal/app/` 不包含来自 `internal/adapter/` 的导入来验证。
 
-### Decision: Pure-Go SQLite
+### Decision: 纯 Go SQLite
 
-SQLite operations are implemented via `modernc.org/sqlite`, which compiles to pure Go WebAssembly and requires no CGO. This allows macOS arm64 (Apple Silicon) and Linux amd64 binaries to be built without cross-compilation toolchains.
+SQLite 操作通过 `modernc.org/sqlite` 实现，它编译为纯 Go 的 WebAssembly 且不需要 CGO。这使得 macOS arm64（Apple Silicon）与 Linux amd64 的二进制无需交叉编译工具链即可构建。
 
-### Decision: Standard Library Logging
+### Decision: 标准库日志
 
-All packages MUST use `log/slog` (not third-party loggers) for structured logging. Handlers (JSON for production, text for development) are configured at application startup.
+所有包 MUST 使用 `log/slog`（而非第三方日志库）进行结构化日志记录。Handler（生产用 JSON、开发用 text）在应用启动时配置。
