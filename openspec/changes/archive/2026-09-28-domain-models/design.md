@@ -1,9 +1,10 @@
-# Design: Domain Models
+# 设计：领域模型
 
-## Entities
+## 实体
 
 ### Node
-Represents a single instance — a device (UAC) or a platform (UAS).
+
+代表单个实例——一台设备（UAC）或一个平台（UAS）。
 
 ```go
 type Role string
@@ -16,8 +17,8 @@ const (
 type Capability string
 const (
     CapSystem     Capability = "system"     // Register / Keepalive / Time
-    CapCollection Capability = "collection" // Persons, Faces, Vehicles, etc.
-    CapCascade    Capability = "cascade"    // Subscribes, Notifications, Dispositions
+    CapCollection Capability = "collection" // Persons, Faces, Vehicles 等
+    CapCascade    Capability = "cascade"    // Subscribes、Notifications、Dispositions
 )
 
 type Status string
@@ -43,32 +44,32 @@ type Node struct {
 }
 ```
 
-Validation: `Sanity()` checks ID/Name non-empty, Role is a known value, Capabilities contains only known values.
+校验：`Sanity()` 检查 ID/Name 非空、Role 为已知值、Capabilities 仅包含已知值。
 
 ### Resource
 
-Represents any entity pushed from device to platform: Person, Face, Vehicle, Plate, NonMotorVehicle, Image, Object.
+代表从设备推送到平台的任意实体：Person、Face、Vehicle、Plate、NonMotorVehicle、Image、Object。
 
 ```go
 type Kind string
 const (
-    KindPerson         Kind = "Person"
-    KindFace           Kind = "Face"
-    KindVehicle        Kind = "Vehicle"
-    KindPlate          Kind = "Plate"
+    KindPerson          Kind = "Person"
+    KindFace            Kind = "Face"
+    KindVehicle         Kind = "Vehicle"
+    KindPlate           Kind = "Plate"
     KindNonMotorVehicle Kind = "NonMotorVehicle"
-    KindImage          Kind = "Image"
-    KindObject         Kind = "Object"
+    KindImage           Kind = "Image"
+    KindObject          Kind = "Object"
 )
 
 type Resource struct {
-    ID          string    `json:"ID"`         // resource instance ID
-    Kind        Kind      `json:"Kind"`
-    SourceNode  string    `json:"SourceNode"` // node that produced the resource
-    Timestamp   time.Time `json:"Timestamp"`
-    Attributes  Metadata  `json:"Attributes"`
-    DataSource  string    `json:"DataSource"` // URI or inline
-    StoragePolicy string  `json:"StoragePolicy"` // hot, warm, cold
+    ID            string    `json:"ID"`         // 资源实例 ID
+    Kind          Kind      `json:"Kind"`
+    SourceNode    string    `json:"SourceNode"` // 产生该资源的节点
+    Timestamp     time.Time `json:"Timestamp"`
+    Attributes    Metadata  `json:"Attributes"`
+    DataSource    string    `json:"DataSource"`    // URI 或 inline
+    StoragePolicy string    `json:"StoragePolicy"` // hot、warm、cold
 }
 ```
 
@@ -84,7 +85,7 @@ type Subscription struct {
     EndTime    time.Time `json:"EndTime"`
     Notifier   string    `json:"Notifier"`
     CreatedAt  time.Time `json:"CreatedAt"`
-    UpdatedAt time.Time `json:"UpdatedAt"`
+    UpdatedAt  time.Time `json:"UpdatedAt"`
 }
 
 type Disposition struct {
@@ -100,13 +101,13 @@ type Disposition struct {
 
 ```go
 type Scenario struct {
-    ID          string         `yaml:"id"`
-    Name        string         `yaml:"name"`
-    Schedule    ScheduleSpec   `yaml:"schedule"`
-    Nodes       []NodeSpec     `yaml:"nodes"`
-    Resources   []ResourceSpec `yaml:"resources"`
+    ID          string          `yaml:"id"`
+    Name        string          `yaml:"name"`
+    Schedule    ScheduleSpec    `yaml:"schedule"`
+    Nodes       []NodeSpec      `yaml:"nodes"`
+    Resources   []ResourceSpec  `yaml:"resources"`
     Subscribes  []SubscribeSpec `yaml:"subscribes"`
-    Faults      []FaultSpec    `yaml:"faults"`
+    Faults      []FaultSpec     `yaml:"faults"`
 }
 
 type ScheduleSpec struct {
@@ -134,7 +135,7 @@ type ResponseStatus struct {
 }
 ```
 
-### ID Generator
+### ID 生成器
 
 ```go
 type Generator struct {
@@ -145,20 +146,20 @@ type Generator struct {
 }
 ```
 
-DeviceID layout: `8 + 2 + 2 + 2 + 6 = 20` digits
-- `[0:8]`  SiteCode (8 digits, left-padded with zeros)
-- `[8:10]` IndustryCode clamped to 0–99 (2 digits)
-- `[10:12]` TypeCode (e.g., 01 = video) (2 digits)
-- `[12:14]` SubTypeCode (e.g., 01 = IPC) (2 digits)
-- `[14:20]` Sequence number, monotonic, max 999999
+DeviceID 布局：`8 + 2 + 2 + 2 + 6 = 20` 位
+- `[0:8]` SiteCode（8 位数字，左侧补零）
+- `[8:10]` IndustryCode（钳制到 0–99，2 位）
+- `[10:12]` TypeCode（例如 01 = video，2 位）
+- `[12:14]` SubTypeCode（例如 01 = IPC，2 位）
+- `[14:20]` 序列号，单调递增，最大 999999
 
-Other helpers: `UUID()` returns RFC 4122 v4 string, `Nonce()` returns 32 hex chars, `SubscribeID()` returns 12-char upper alphanumeric.
+其他辅助方法：`UUID()` 返回 RFC 4122 v4 字符串，`Nonce()` 返回 32 个十六进制字符，`SubscribeID()` 返回 12 个大写字母数字。
 
-## Validation
+## 校验
 
-Each entity exposes `Sanity() error` that returns one of:
+每个实体都暴露 `Sanity() error`，其返回下列哨兵错误之一：
 - `ErrMissingID` / `ErrMissingName` / `ErrInvalidRole` / `ErrInvalidCapability`
 - `ErrMissingKind` / `ErrMissingSourceNode`
 - `ErrMissingSubscribeID` / `ErrMissingDispositionID`
 
-The errors are exported and usable with `errors.Is`.
+这些错误被导出并可用于 `errors.Is`。

@@ -1,70 +1,70 @@
 ## ADDED Requirements
 
-### Requirement: DeviceID MUST be a 20-digit string
+### Requirement: DeviceID MUST 是 20 位数字字符串
 
-A valid `Node.ID` (DeviceID) MUST be exactly 20 characters, all digits 0–9. Any input that fails this check MUST cause `Node.Sanity()` to return `ErrInvalidDeviceID`.
+有效的 `Node.ID`（DeviceID）MUST 恰好 20 个字符且全部为数字 0–9。任何未通过该检查的输入 MUST 导致 `Node.Sanity()` 返回 `ErrInvalidDeviceID`。
 
-#### Scenario: 1-character input
-WHEN `Sanity()` is called on a Node whose ID is `"x"`
-THEN the error MUST satisfy `errors.Is(err, ErrInvalidDeviceID)`.
+#### Scenario: 1 个字符的输入
+WHEN 对 ID 为 `"x"` 的 Node 调用 `Sanity()`
+THEN 错误 MUST 满足 `errors.Is(err, ErrInvalidDeviceID)`。
 
-#### Scenario: 20-character all-numeric input
-WHEN `Sanity()` is called on a Node whose ID is `"41000000005030312222"`
-THEN the error MUST be `nil`.
+#### Scenario: 20 位全数字输入
+WHEN 对 ID 为 `"41000000005030312222"` 的 Node 调用 `Sanity()`
+THEN 错误 MUST 为 `nil`。
 
-### Requirement: Resource Kind MUST be one of seven known values
+### Requirement: Resource Kind MUST 是七个已知值之一
 
-A `Resource.Kind` value MUST equal one of: `Person`, `Face`, `Vehicle`, `Plate`, `NonMotorVehicle`, `Image`, `Object`. Any other value MUST cause validation to return `ErrInvalidKind`.
+`Resource.Kind` 的值 MUST 是以下之一：`Person`、`Face`、`Vehicle`、`Plate`、`NonMotorVehicle`、`Image`、`Object`。其他任何值 MUST 导致校验返回 `ErrInvalidKind`。
 
-### Requirement: HTTP Status codes MUST map to a 5-value enum
+### Requirement: HTTP Status 码 MUST 映射到 5 值枚举
 
-`response.Code` MUST be one of `0` (OK), `1` (Invalid), `2` (NotFound), `3` (Unauthorized), `4` (ServerError). The corresponding `ResponseStatus.StatusString` MUST be `"OK"`, `"INVALID"`, `"NOTFOUND"`, `"UNAUTHORIZED"`, or `"SERVER_ERROR"`.
+`response.Code` MUST 是 `0`（OK）、`1`（Invalid）、`2`（NotFound）、`3`（Unauthorized）、`4`（ServerError）之一。对应的 `ResponseStatus.StatusString` MUST 为 `"OK"`、`"INVALID"`、`"NOTFOUND"`、`"UNAUTHORIZED"` 或 `"SERVER_ERROR"`。
 
-### Requirement: DeviceID generator MUST produce unique IDs
+### Requirement: DeviceID 生成器 MUST 产出唯一 ID
 
-Each call to `Generator.DeviceID()` MUST return a unique 20-digit string. The generator MUST be safe for concurrent use from multiple goroutines.
+每次调用 `Generator.DeviceID()` MUST 返回唯一的 20 位字符串。生成器 MUST 支持多个 goroutine 并发使用。
 
-#### Scenario: 1000 concurrent calls
-WHEN 1000 goroutines each call `DeviceID()` once
-THEN the resulting set MUST contain 1000 distinct strings.
+#### Scenario: 1000 个并发调用
+WHEN 1000 个 goroutine 各调用一次 `DeviceID()`
+THEN 结果集合 MUST 包含 1000 个互不相同的字符串。
 
-### Requirement: DeviceID generator MUST follow layout `8+2+2+2+6`
+### Requirement: DeviceID 生成器 MUST 遵循 `8+2+2+2+6` 布局
 
-A generated DeviceID MUST decompose as:
-- Characters `[0..8]` → SiteCode
-- Characters `[8..10]` → IndustryCode (mod 100)
-- Characters `[10..12]` → TypeCode (e.g., 01)
-- Characters `[12..14]` → SubTypeCode (e.g., 01)
-- Characters `[14..20]` → Sequence number
+生成的 DeviceID MUST 可分解为：
+- 字符 `[0..8]` → SiteCode
+- 字符 `[8..10]` → IndustryCode（mod 100）
+- 字符 `[10..12]` → TypeCode（例如 01）
+- 字符 `[12..14]` → SubTypeCode（例如 01）
+- 字符 `[14..20]` → 序列号
 
-#### Scenario: SiteCode 41000000, IndustryCode 30, Seq 1
-WHEN the generator is constructed with `NewGenerator(41000000, 30)` and `DeviceID()` is called
-THEN the result MUST start with `"41000000301"` and be 20 chars in total.
+#### Scenario: SiteCode 41000000、IndustryCode 30、Seq 1
+WHEN 用 `NewGenerator(41000000, 30)` 构造生成器并调用 `DeviceID()`
+THEN 结果 MUST 以 `"41000000301"` 开头，且总长度为 20 字符。
 
-### Requirement: Nonce must be cryptographically random
+### Requirement: Nonce 必须是密码学安全的随机值
 
-`Generator.Nonce()` MUST return a 32-character lowercase hexadecimal string. The output MUST use `crypto/rand` as the entropy source — not `time.Now()` or other predictable sources.
+`Generator.Nonce()` MUST 返回 32 个字符的小写十六进制字符串。输出 MUST 以 `crypto/rand` 作为熵源——不得使用 `time.Now()` 或其他可预测来源。
 
-### Requirement: UUID must follow RFC 4122 v4
+### Requirement: UUID 必须遵循 RFC 4122 v4
 
-`Generator.UUID()` MUST return a 36-character string in the canonical UUID form (`8-4-4-4-12` with dashes). The version digit MUST be `4` and the variant digit MUST be in `8-b`.
+`Generator.UUID()` MUST 返回 36 字符的规范 UUID 集合形式（`8-4-4-4-12` 带连字符）。版本位 MUST 为 `4`，变体位 MUST 在 `8-b` 范围内。
 
-### Requirement: SubscribeID must be 12 uppercase alphanumeric chars
+### Requirement: SubscribeID 必须是 12 个大写字母数字字符
 
-`Generator.SubscribeID()` MUST return exactly 12 characters from the alphabet `A–Z` and `0–9`.
+`Generator.SubscribeID()` MUST 恰好返回 12 个来自 `A–Z` 与 `0–9` 字母表的字符。
 
 ---
 
 ## ADDED Architecture Decisions
 
-### Decision: Domain layer has zero external dependencies
+### Decision: 领域层零外部依赖
 
-`internal/domain/` packages MUST NOT import any package outside the standard library. This enforces purity and prevents accidental coupling to infrastructure.
+`internal/domain/` 下的包 MUST NOT 导入标准库之外的任何包。这保证了纯净性并防止与基础设施意外耦合。
 
-### Decision: Validation returns sentinel errors
+### Decision: 校验返回哨兵错误
 
-All `Sanity()` methods MUST return one of the named sentinel errors (`ErrMissingID`, etc.) so callers can use `errors.Is` for dispatch.
+所有 `Sanity()` 方法 MUST 返回命名的哨兵错误之一（`ErrMissingID` 等），让调用方能用 `errors.Is` 做分派。
 
-### Decision: ResourceKind is exhaustive
+### Decision: ResourceKind 是穷举的
 
-The compiler MUST be able to detect unhandled cases via a switch over `Kind`. New Kinds MUST require an update to the switch — this prevents silent protocol gaps.
+编译器 MUST 能通过对 `Kind` 的 switch 检测未处理的分支。新增 Kind MUST 要求同步更新 switch——这防止出现无声的协议缺口。

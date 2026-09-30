@@ -1,51 +1,51 @@
-## Tasks
+## 任务
 
-### Task: Define Node, Role, Capability, Status
+### 任务：定义 Node、Role、Capability、Status
 
-- [x] Create `internal/domain/node/node.go`
-- [x] Define `Node` struct with all fields
-- [x] Define `Role`, `Capability`, `Status` enums
-- [x] Implement `Sanity()` returning sentinel errors
+- [x] 创建 `internal/domain/node/node.go`
+- [x] 定义 `Node` 结构体及其所有字段
+- [x] 定义 `Role`、`Capability`、`Status` 枚举
+- [x] 实现 `Sanity()`，返回哨兵错误
 
-### Task: Define Resource, Kind, Metadata
+### 任务：定义 Resource、Kind、Metadata
 
-- [x] Create `internal/domain/resource/resource.go`
-- [x] Define `Resource` struct
-- [x] Define `Kind` enum (7 values)
-- [x] Implement `Sanity()`
+- [x] 创建 `internal/domain/resource/resource.go`
+- [x] 定义 `Resource` 结构体
+- [x] 定义 `Kind` 枚举（7 个值）
+- [x] 实现 `Sanity()`
 
-### Task: Define Subscription, Disposition
+### 任务：定义 Subscription、Disposition
 
-- [x] Add to `internal/domain/resource/` (or new package)
-- [x] Implement `Sanity()` on both
+- [x] 加入 `internal/domain/resource/`（或新建包）
+- [x] 为两者实现 `Sanity()`
 
-### Task: Define Scenario, ScheduleSpec, NodeSpec, etc.
+### 任务：定义 Scenario、ScheduleSpec、NodeSpec 等
 
-- [x] Create `internal/domain/scenario/scenario.go`
-- [x] Define struct tags for both `yaml` (scenario loader) and `json` (HTTP)
+- [x] 创建 `internal/domain/scenario/scenario.go`
+- [x] 同时定义 `yaml`（场景加载）与 `json`（HTTP）的 struct tag
 
-### Task: Define ResponseStatus, Code
+### 任务：定义 ResponseStatus、Code
 
-- [x] Create `internal/domain/response/response.go`
-- [x] Define `Code` enum (5 values) and `ResponseStatus` struct
-- [x] Add helper functions `OK()`, `Invalid()`, etc.
+- [x] 创建 `internal/domain/response/response.go`
+- [x] 定义 `Code` 枚举（5 个值）与 `ResponseStatus` 结构体
+- [x] 添加辅助函数 `OK()`、`Invalid()` 等
 
-### Task: Implement ID Generator
+### 任务：实现 ID 生成器
 
-- [x] Create `internal/domain/ids/ids.go`
-- [x] Implement `Generator` with mutex, `NewGenerator(siteCode, industryCode uint32)`
-- [x] Implement `DeviceID()`, `UUID()`, `Nonce()`, `SubscribeID()`
-- [x] Use `crypto/rand` for Nonce and UUID; monotonic counter for DeviceID sequence
+- [x] 创建 `internal/domain/ids/ids.go`
+- [x] 实现带互斥锁的 `Generator`，`NewGenerator(siteCode, industryCode uint32)`
+- [x] 实现 `DeviceID()`、`UUID()`、`Nonce()`、`SubscribeID()`
+- [x] Nonce 与 UUID 使用 `crypto/rand`；DeviceID 序列号使用单调计数器
 
-### Task: Unit tests
+### 任务：单元测试
 
-- [x] `internal/domain/node/node_test.go` — Sanity() coverage, HasCapability()
-- [x] `internal/domain/resource/resource_test.go` — Kind exhaustiveness
-- [x] `internal/domain/scenario/scenario_test.go` — YAML/JSON round-trip
-- [x] `internal/domain/response/response_test.go` — Code mapping
-- [x] `internal/domain/ids/ids_test.go` — DeviceID layout, concurrency, Nonce uniqueness
+- [x] `internal/domain/node/node_test.go` —— Sanity() 覆盖度、HasCapability()
+- [x] `internal/domain/resource/resource_test.go` —— Kind 穷举性
+- [x] `internal/domain/scenario/scenario_test.go` —— YAML/JSON 往返
+- [x] `internal/domain/response/response_test.go` —— Code 映射
+- [x] `internal/domain/ids/ids_test.go` —— DeviceID 布局、并发、Nonce 唯一性
 
-### Verification
+### 验证
 
 - `go test ./internal/domain/...` → exit 0
-- Coverage ≥ 90% for domain packages
+- 领域包覆盖率 ≥ 90%
