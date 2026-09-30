@@ -80,6 +80,7 @@ func TestCaptureE2E_RecordsEveryRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCaptureReader: %v", err)
 	}
+	t.Cleanup(func() { _ = reader.Close() })
 
 	// The CaptureStore writes synchronously, but a small grace window ensures
 	// any asynchronous buffering has flushed before we query.

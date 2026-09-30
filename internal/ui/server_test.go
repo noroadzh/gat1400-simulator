@@ -36,6 +36,7 @@ func (f *fakeCaptureReader) ExportJSONL(_ ports.CaptureFilter) (string, error) {
 func (f *fakeCaptureReader) ExportHAR(_ ports.CaptureFilter) (string, error) {
 	return "/tmp/out.har", nil
 }
+func (f *fakeCaptureReader) Close() error { return nil }
 
 // newTestBFF 装配 BFF 测试服务：临时 sqlite + 内存 store + 假 CaptureReader。
 // 协议端指向 mockProtocolServer（可选）；默认使用 http://127.0.0.1:14000（不会被实际访问）。

@@ -72,6 +72,7 @@ func TestUAC_Lifecycle_FullChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCaptureStore: %v", err)
 	}
+	t.Cleanup(func() { _ = cs.Close() })
 	rec := capture.NewRecorder(cs, log)
 	disp := scenarioadapter.NewOutboundDispatcher(client, log, rec)
 	target := node.Node{ID: deviceID, HTTPListen: fx.ts.URL[len("http://"):]}
@@ -199,6 +200,7 @@ func TestUAC_EngineLifecycle_RegisterAndUnregister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCaptureStore: %v", err)
 	}
+	t.Cleanup(func() { _ = cs.Close() })
 	rec := capture.NewRecorder(cs, log)
 	disp := scenarioadapter.NewOutboundDispatcher(client, log, rec)
 
