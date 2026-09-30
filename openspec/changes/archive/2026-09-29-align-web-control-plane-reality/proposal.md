@@ -1,28 +1,28 @@
-# Proposal: align-web-control-plane-reality
+# 提案：align-web-control-plane-reality
 
-## Why
+## 为什么做
 
-The web control plane implementation diverged from its OpenSpec specification. The archived change `2026-09-28-web-control-plane` claimed delivery of `web/package.json`, `web/vite.config.ts`, and `pnpm build` tooling—none of which exist. The frontend is currently a hand-written 380-line CDN-based single-file SPA, not a Vite-built Vue 3 application. This change formally acknowledges the gap and establishes the corrected state.
+Web 控制面的实现与 OpenSpec 规范出现了偏差。已归档的 change `2026-09-28-web-control-plane` 声称交付了 `web/package.json`、`web/vite.config.ts` 与 `pnpm build` 工具链——三者均不存在。前端目前是一个手写的、基于 CDN 的 380 行单文件 SPA，而不是 Vite 构建的 Vue 3 应用。本 change 正式承认这一偏差，并确立修正后的状态。
 
-## What Changes
+## 变更内容
 
-- **Delete** the `web/` directory (empty `src/` and `public/`, gitignored `dist/`, no npm project files)
-- **Add** `/internal/ui/dist/` to `.gitignore` — it becomes the sole SPA artifact location, replacing the `web/dist/` reference in spec
-- **Declare** in `specs/web-bff/spec.md` that the frontend is currently a CDN-based single-file SPA, and that Change 3 (`vue-componentize-and-dockerize`) will introduce the Vite build pipeline
-- The archived change `2026-09-28-web-control-plane` is **not modified** (it is history); this proposal documents the deviation for future readers
+- **删除** `web/` 目录（空的 `src/` 与 `public/`、被 gitignore 的 `dist/`、无 npm 项目文件）
+- **将** `/internal/ui/dist/` **加入** `.gitignore` —— 它成为唯一的 SPA 产物位置，取代 spec 中的 `web/dist/` 引用
+- **在** `specs/web-bff/spec.md` 中**声明**：前端目前是基于 CDN 的单文件 SPA，Change 3（`vue-componentize-and-dockerize`）会引入 Vite 构建流水线
+- 已归档的 change `2026-09-28-web-control-plane` **不被修改**（它是历史记录）；本提案为后来的读者记录该偏差
 
-## Capabilities
+## 能力（Capabilities）
 
-### Modified Capabilities
+### 修改的能力
 
-- **web-bff** (`openspec/specs/web-bff/spec.md`): Revise the "frontend bundle is embedded at compile time" architecture decision to accurately reflect the current state: "frontend is a hand-written CDN-based SPA served from `internal/ui/dist/`". Add a forward reference to the planned Vite migration in Change 3.
+- **web-bff**（`openspec/specs/web-bff/spec.md`）：修订"前端 bundle 在编译期嵌入"这条架构决策，使其准确反映当前状态："前端是手写的、基于 CDN 的 SPA，从 `internal/ui/dist/` 提供"。并加入指向 Change 3 中 Vite 迁移的前向引用。
 
-### New Capabilities
+### 新增能力
 
-None.
+无。
 
-## Impact
+## 影响
 
-- **Code**: `web/` directory deleted; `.gitignore` updated; `openspec/specs/web-bff/spec.md` delta
-- **Git history**: No destructive rewrites; `web/` was untracked in the latest commit
-- **Downstream**: Change 2 (`spa-root-routing`) and Change 3 (`vue-componentize-and-dockerize`) build on the corrected state established here
+- **代码**：`web/` 目录删除；`.gitignore` 更新；`openspec/specs/web-bff/spec.md` delta
+- **Git 历史**：无破坏性改写；`web/` 在最近一次 commit 中未被跟踪
+- **下游**：Change 2（`spa-root-routing`）与 Change 3（`vue-componentize-and-dockerize`）建立在本 change 确立的修正状态之上

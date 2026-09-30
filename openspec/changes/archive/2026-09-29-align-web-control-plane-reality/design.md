@@ -1,48 +1,48 @@
-# Design: align-web-control-plane-reality
+# 设计：align-web-control-plane-reality
 
-## Overview
+## 概述
 
-This change is a documentation and hygiene correction. No functional code is modified. The goal is to make OpenSpec artifacts reflect reality so future implementors are not misled.
+本 change 是一次文档与整洁性修正，不涉及功能代码的修改。目标是使 OpenSpec 文档与实际状态一致，避免后续实现者被误导。
 
-## Current State vs. Specification
+## 当前状态 vs 规范
 
 ```
-                        OpenSpec claim               Actual state
+                        OpenSpec 声称                 实际状态
                         ─────────────────────────     ──────────────────────────────────────
-web/package.json        exists (task [x])            does NOT exist
-web/vite.config.ts       exists (task [x])            does NOT exist
-web/src/                 has Vue components           empty directory
-web/public/              has static assets            empty directory
-web/dist/               pnpm build output            hand-written CDN SPA (gitignored)
-internal/ui/dist/        referenced in spec           git-tracked CDN SPA (actual source)
+web/package.json        存在（task [x]）              不存在
+web/vite.config.ts       存在（task [x]）              不存在
+web/src/                有 Vue 组件                   空目录
+web/public/             有静态资源                    空目录
+web/dist/               pnpm build 输出              手写的 CDN SPA（被 gitignore）
+internal/ui/dist/        spec 中被引用                git 跟踪的 CDN SPA（实际来源）
 ```
 
-## Decision: Do Not Modify Archived Change
+## 决策：不修改已归档 Change
 
-The archived change `2026-09-28-web-control-plane` is a historical record. Modifying its `tasks.md` would rewrite history. Instead, this change's `proposal.md` documents the deviation explicitly.
+已归档 change `2026-09-28-web-control-plane` 是历史记录。修改其 `tasks.md` 会改写历史。因此本 change 的 `proposal.md` 显式记录了该偏差。
 
-## Change 1 Artifacts
+## Change 工件
 
-| Artifact | Action |
+| 工件 | 状态 |
 |---|---|
-| `proposal.md` | ✅ Written |
-| `design.md` | ✅ Written (this file) |
-| `specs/web-bff/spec.md` | Delta: update architecture decision text |
-| `tasks.md` | Checklist for the two file-system actions |
+| `proposal.md` | ✅ 已写 |
+| `design.md` | ✅ 已写（本文） |
+| `specs/web-bff/spec.md` | Delta：更新架构决策文本 |
+| `tasks.md` | 两项文件系统操作的检查清单 |
 
-## File Operations
+## 文件操作
 
-### 1. Delete `web/` directory
+### 1. 删除 `web/` 目录
 
 ```bash
 rm -rf web/
 ```
 
-Rationale: `web/` is entirely redundant. `web/dist/` was gitignored (`.gitignore` line 15), `web/src/` and `web/public/` were empty. There is nothing of value.
+理由：`web/` 完全冗余。`web/dist/` 被 gitignore（`.gitignore` 第 15 行），`web/src/` 与 `web/public/` 为空。没有价值。
 
-### 2. Update `.gitignore`
+### 2. 更新 `.gitignore`
 
-Append to `.gitignore`:
+追加到 `.gitignore`：
 
 ```
 # Frontend SPA build output (Vite output goes here when npm build is introduced)
@@ -50,34 +50,34 @@ Append to `.gitignore`:
 /internal/ui/dist/
 ```
 
-### 3. Spec delta: `specs/web-bff/spec.md`
+### 3. Spec delta：`specs/web-bff/spec.md`
 
-Revise the architecture decision "frontend bundle is embedded at compile time":
+修订架构决策"前端 bundle 在编译期嵌入"：
 
-**Before:**
+**修改前：**
 > The frontend build artifact (`web/dist/`) is embedded via `embed.FS` and served directly from memory.
 
-**After:**
+**修改后：**
 > The frontend SPA is currently a hand-written CDN-based single-file application served from `internal/ui/dist/` via `embed.FS`. This directory will be replaced by the Vite build output in Change 3 (`vue-componentize-and-dockerize`).
 
-## Build Verification
+## 构建验证
 
-No build artifacts are changed. The following commands verify the change is safe:
+没有构建产物被修改。以下命令验证变更安全：
 
 ```bash
-# Confirm web/ is gone
+# 确认 web/ 已消失
 ls web/ 2>&1  # → No such file or directory
 
-# Confirm internal/ui/dist/ is still present (served by BFF)
+# 确认 internal/ui/dist/ 仍存在（BFF 所服务）
 ls internal/ui/dist/index.html  # → exists
 
-# Go build still works
+# Go 构建仍然正常
 go build ./...
 
-# Go tests still pass
+# Go 测试仍然通过
 go test -race ./...
 ```
 
-## Open Questions
+## 待定问题
 
-None. The scope is intentionally minimal.
+无。范围有意保持最小。
