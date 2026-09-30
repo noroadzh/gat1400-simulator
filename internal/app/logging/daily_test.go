@@ -49,6 +49,16 @@ func TestDailyWriter_RotateIsSerialized(t *testing.T) {
 
 	rot := newLumberjackForTest(path)
 	d := newDailyWriter(rot)
+	// 测试环境额外清理：dailyWriter.stop() 只关后台 goroutine，不代理底层
+	// lumberjack 的文件句柄。Windows 对已打开文件默认独占，TempDir cleanup
+	// 会报 "The process cannot access the file because it is being used by
+	// another process"，因此必须在 TempDir 回收前显式关闭 rot。
+	// 生产路径由 rotatorCloser.Close() 统一管理，此处仅为测试清理。
+	//
+	// t.Cleanup 是 LIFO（后注册先执行），所以先注册 rot.Close()、再注册
+	// d.stop()，保证「先停后台 goroutine，再关文件句柄」的顺序，避免
+	// loop 退出前仍在 rot.Rotate() 而与 Close 竞争。
+	t.Cleanup(func() { _ = rot.Close() })
 	t.Cleanup(func() { d.stop() })
 
 	var wg sync.WaitGroup

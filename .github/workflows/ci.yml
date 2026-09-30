@@ -57,8 +57,10 @@ jobs:
           go-version: '1.25'
           cache: true
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6.5.1
+        uses: golangci/golangci-lint-action@v7.0.1
         with:
+          # action 与 linter 主版本必须配对：golangci-lint v2 需要 action v7+，
+          # action v6 会在 prepare environment 阶段直接拒绝 v2 版本字符串。
           # golangci-lint 预编译二进制的构建 Go 版本必须 >= go.mod 声明版本
           # （go 1.25.5），否则在加载 module 时直接报
           # "can't load config: ... lower than the targeted Go version" 并退出码 3。
