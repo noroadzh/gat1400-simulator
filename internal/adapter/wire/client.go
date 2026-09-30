@@ -131,7 +131,7 @@ func (c *Client) do(ctx context.Context, method, url, deviceID string, body []by
 	if err != nil {
 		return 0, nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		// Digest challenge: build an Authorization header and retry once.
@@ -152,7 +152,7 @@ func (c *Client) do(ctx context.Context, method, url, deviceID string, body []by
 		if err != nil {
 			return 0, nil, err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 
 	respBody, err := io.ReadAll(resp.Body)

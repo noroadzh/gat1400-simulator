@@ -100,8 +100,12 @@ func TestBuildAuthorization_NoQopHasHexResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildAuthorization: %v", err)
 	}
-	if !strings.Contains(auth, "qop=auth") {
-		// implementation always emits qop=auth; verify at minimum.
+	if strings.Contains(auth, "qop=auth") {
+		// 当 qop 协商为 auth 时，必须额外校验 nc / cnonce 字段同时存在，
+		// 否则服务端会判定为降级到 RFC 2069 兼容模式。
+		if !strings.Contains(auth, "nc=") || !strings.Contains(auth, "cnonce=") {
+			t.Fatalf("qop=auth must include nc and cnonce:\n%s", auth)
+		}
 	}
 	md5 := regexp.MustCompile(`response="[0-9a-f]{32}"`)
 	if !md5.MatchString(auth) {

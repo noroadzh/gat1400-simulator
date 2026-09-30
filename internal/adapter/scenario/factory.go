@@ -44,9 +44,8 @@ func (f *Factory) Build(kind resource.Kind) map[string]any {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	now := time.Now().UTC().Format("20060115092800XXZ07:00")
 	// Format GAT-compatible "YYYYMMDDHHMMSSmmm" using a strict, fixed-width form:
-	now = time.Now().UTC().Format("20060102150405.000") // millis
+	now := time.Now().UTC().Format("20060102150405.000") // millis
 	now = strings.ReplaceAll(strings.ReplaceAll(now, ".", ""), " ", "T")
 	if len(now) < 17 {
 		now = time.Now().UTC().Format("20060102150405") + "000"

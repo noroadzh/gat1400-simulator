@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -26,12 +25,10 @@ import (
 // Loader 扫描 YAML 目录并解析为 scenario.Scenario 切片。
 //
 // 设计原则：
-//   - goroutine-safe（互斥锁保护内部状态）
+//   - goroutine-safe（无内部可变状态，天然可并发调用）
 //   - 宽容：解析错误返回（文件名 + 错误），其他文件仍可加载
 //   - 多文件同名 ID 时 last-wins
-type Loader struct {
-	mu sync.Mutex
-}
+type Loader struct{}
 
 // NewLoader 构造一个空状态的 loader。
 func NewLoader() *Loader { return &Loader{} }

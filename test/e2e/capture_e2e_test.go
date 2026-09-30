@@ -50,14 +50,15 @@ func TestCaptureE2E_RecordsEveryRequest(t *testing.T) {
 	})
 
 	ts := httptest.NewUnstartedServer(srv)
-	ts.Listener.Close()
+	_ = ts.Listener.Close()
 	ts.Listener = ln
 	ts.Start()
 	t.Cleanup(ts.Close)
 
 	// Seed a node.
 	nodeID := "41000000005030312222"
-	nodeSvc.UpsertNode(ctx, node.Node{
+	// 测试夹具创建节点，下游 Register 步骤会在状态不符时返回错误
+	_, _ = nodeSvc.UpsertNode(ctx, node.Node{
 		ID: nodeID, Name: nodeID, Role: node.RoleDevice,
 		Capabilities: []node.Capability{node.CapSystem, node.CapCollection},
 	})
@@ -71,8 +72,8 @@ func TestCaptureE2E_RecordsEveryRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do: %v", err)
 	}
-	defer resp.Body.Close()
-	io.ReadAll(resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+	_, _ = io.ReadAll(resp.Body)
 
 	// Give the async recorder a moment to persist.
 	// (In production the recorder uses a buffered channel, so 100ms is safe.)

@@ -59,7 +59,11 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6.5.1
         with:
-          version: v1.61.0
+          # golangci-lint 预编译二进制的构建 Go 版本必须 >= go.mod 声明版本
+          # （go 1.25.5），否则在加载 module 时直接报
+          # "can't load config: ... lower than the targeted Go version" 并退出码 3。
+          # 升级 go.mod 时需同步升级本字段（详见 specs/ci-quality-gates）。
+          version: v2.7.2
 
   build:
     name: Build

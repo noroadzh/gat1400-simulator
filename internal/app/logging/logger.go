@@ -165,7 +165,7 @@ func New(cfg *config.LogConfig, profile string) (*slog.Logger, func() error, err
 // buildSink 构造 fanout writer 与关闭器。
 func buildSink(cfg *config.LogConfig) (io.Writer, func() error, error) {
 	var writers []io.Writer
-	var closer func() error = func() error { return nil }
+	closer := func() error { return nil }
 	anySink := false
 
 	if cfg.Stdout {

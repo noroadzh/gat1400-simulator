@@ -35,12 +35,14 @@ func TestGenerator_DeviceID_SequenceIncreases(t *testing.T) {
 func TestGenerator_Nonce_UniqueAndHexLength(t *testing.T) {
 	g := NewGenerator(0, 130)
 	seen := map[string]bool{}
+	// hexRE 提到循环外，避免 1000 次重复编译正则
+	hexRE := regexp.MustCompile(`^[0-9a-f]+$`)
 	for i := 0; i < 1000; i++ {
 		n := g.Nonce()
 		if len(n) != 32 {
 			t.Fatalf("Nonce length = %d, want 32", len(n))
 		}
-		if matched, _ := regexp.MatchString(`^[0-9a-f]+$`, n); !matched {
+		if !hexRE.MatchString(n) {
 			t.Fatalf("Nonce = %q, want hex", n)
 		}
 		if seen[n] {

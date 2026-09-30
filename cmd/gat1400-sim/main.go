@@ -115,13 +115,13 @@ func run(profile string) (ready bool, err error) {
 	if err != nil {
 		return true, fmt.Errorf("open capture store: %w", err)
 	}
-	defer captureStore.Close()
+	defer func() { _ = captureStore.Close() }()
 
 	nonceStore, err := storage.NewNonceStore(rootCtx, cfg.Storage.Path)
 	if err != nil {
 		return true, fmt.Errorf("open nonce store: %w", err)
 	}
-	defer nonceStore.Close()
+	defer func() { _ = nonceStore.Close() }()
 
 	captureReader, err := storage.NewCaptureReader(cfg.Storage.Path)
 	if err != nil {

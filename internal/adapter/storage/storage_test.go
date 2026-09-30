@@ -172,9 +172,10 @@ func TestCaptureStore_QueryFilters(t *testing.T) {
 			Remote: "127.0.0.1", Status: status, StartedAt: ts,
 		}
 	}
-	cs.Append(mk("A", "inbound", "POST", "/VIID/Persons", 200, now))
-	cs.Append(mk("A", "outbound", "POST", "/VIID/Persons", 500, now.Add(1*time.Second)))
-	cs.Append(mk("B", "inbound", "GET", "/VIID/Time", 200, now.Add(2*time.Second)))
+	// 写测试夹具不需要逐条检查 Append 错误，下游 Query 的断言已覆盖语义
+	_ = cs.Append(mk("A", "inbound", "POST", "/VIID/Persons", 200, now))
+	_ = cs.Append(mk("A", "outbound", "POST", "/VIID/Persons", 500, now.Add(1*time.Second)))
+	_ = cs.Append(mk("B", "inbound", "GET", "/VIID/Time", 200, now.Add(2*time.Second)))
 
 	if got, _ := cr.Query(ports.CaptureFilter{NodeID: "A"}); len(got) != 2 {
 		t.Fatalf("NodeID filter: got %d", len(got))
@@ -209,13 +210,13 @@ func TestCaptureReader_ExportJSONL(t *testing.T) {
 	t.Cleanup(func() { _ = cr.Close() })
 
 	now := time.Now().UTC()
-	cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: now})
+	_ = cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: now})
 
 	tmp, err := cr.ExportJSONL(ports.CaptureFilter{})
 	if err != nil {
 		t.Fatalf("ExportJSONL: %v", err)
 	}
-	defer os.Remove(tmp)
+	defer func() { _ = os.Remove(tmp) }()
 	b, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
@@ -241,13 +242,13 @@ func TestCaptureReader_ExportHAR(t *testing.T) {
 	cr, _ := NewCaptureReader(path)
 	t.Cleanup(func() { _ = cr.Close() })
 
-	cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: time.Now().UTC()})
+	_ = cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: time.Now().UTC()})
 
 	tmp, err := cr.ExportHAR(ports.CaptureFilter{})
 	if err != nil {
 		t.Fatalf("ExportHAR: %v", err)
 	}
-	defer os.Remove(tmp)
+	defer func() { _ = os.Remove(tmp) }()
 	b, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)

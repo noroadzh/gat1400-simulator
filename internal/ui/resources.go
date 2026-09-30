@@ -193,7 +193,7 @@ func (s *Server) countObjects(ctx context.Context, collection, kind string) (int
 	if err != nil {
 		return 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("protocol returned status %d", resp.StatusCode)
 	}
@@ -298,7 +298,7 @@ func (s *Server) handleResourceProxy(c echo.Context) error {
 			},
 		})
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 流式回写：不要一次性把 body 读到内存。
 	respBody, err := io.ReadAll(resp.Body)

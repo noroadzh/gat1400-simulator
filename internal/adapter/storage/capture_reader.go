@@ -88,7 +88,7 @@ func (r *captureReader) Query(filter ports.CaptureFilter) ([]ports.CaptureEntry,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []ports.CaptureEntry
 	for rows.Next() {

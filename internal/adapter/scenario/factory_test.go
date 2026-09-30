@@ -1,7 +1,6 @@
 package scenario
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -78,8 +77,4 @@ func TestFactory_TimeStampFormat(t *testing.T) {
 	if _, err := time.Parse(layout, got[:14]); err != nil {
 		t.Fatalf("ShotTime prefix %q not in %s: %v", got[:14], layout, err)
 	}
-}
-
-func mapsEqual(a, b map[string]any) bool {
-	return reflect.DeepEqual(a, b)
 }

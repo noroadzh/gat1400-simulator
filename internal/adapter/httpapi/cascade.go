@@ -78,13 +78,6 @@ func (r *subscribeRepo) storeNotification(id string, payload map[string]any) {
 	r.notifs[id] = append(r.notifs[id], payload)
 }
 
-func (r *subscribeRepo) get(id string) (map[string]any, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	v, ok := r.subs[id]
-	return v, ok
-}
-
 func (r *subscribeRepo) list() []map[string]any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -117,13 +110,6 @@ func (r *subscribeRepo) storeDisposition(sc map[string]any) (string, bool) {
 	defer r.mu.Unlock()
 	r.disp[id] = sc
 	return id, true
-}
-
-func (r *subscribeRepo) getDisposition(id string) (map[string]any, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	v, ok := r.disp[id]
-	return v, ok
 }
 
 func (r *subscribeRepo) listDispositions() []map[string]any {

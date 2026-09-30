@@ -72,7 +72,7 @@ func startRealServer(t *testing.T, ln net.Listener) *serverFixture {
 	})
 
 	ts := httptest.NewUnstartedServer(srv)
-	ts.Listener.Close()
+	_ = ts.Listener.Close()
 	ts.Listener = ln
 	ts.Start()
 	t.Cleanup(ts.Close)
@@ -187,7 +187,7 @@ func TestProtocolE2E_RealTCPConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Send a raw HTTP request over the raw TCP connection.
 	req := "GET /VIID/System/Time HTTP/1.1\r\nHost: localhost\r\n\r\n"
@@ -197,7 +197,7 @@ func TestProtocolE2E_RealTCPConnection(t *testing.T) {
 
 	// Read the response.
 	buf := make([]byte, 4096)
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	n, err := conn.Read(buf)
 	if err != nil && err != io.EOF {
 		t.Fatalf("read: %v", err)
@@ -259,7 +259,7 @@ func TestProtocolE2E_NonceReplay(t *testing.T) {
 		if err != nil {
 			t.Fatalf("do: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		raw, _ := io.ReadAll(resp.Body)
 		return resp.StatusCode, raw
 	}
