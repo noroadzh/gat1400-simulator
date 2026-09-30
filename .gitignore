@@ -15,8 +15,8 @@
 # ── 本地工具目录（不纳入版本管理）──────────────────────────────
 # IDE 助手配置：agents / commands / skills / plans
 /.codebuddy/
-# OpenSpec 变更管理目录：specs / changes / archive
-/openspec/
+
+# ── OpenSpec 变更管理（纳入版本管理：specs / changes / archive）─
 
 # ── 前端 ────────────────────────────────────────────────────────
 # 依赖目录（任意层级）
