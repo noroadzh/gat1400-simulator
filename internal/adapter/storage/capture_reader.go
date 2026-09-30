@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/noroadzh/gat1400-simulator/internal/app/ports"
@@ -12,8 +13,13 @@ import (
 
 // captureReader ports.CaptureReader 接口的 sqlite 实现。
 // 通过 NewCaptureReader 暴露，对外只暴露 reader 的 API。
+//
+// closeOnce 保证 Close 可以多次调用幂等,避免 t.Cleanup 链中重复
+// 关闭触发 sql.ErrConnDone 或 Windows 上的文件锁冲突。
 type captureReader struct {
-	db *sql.DB
+	db        *sql.DB
+	closeOnce sync.Once
+	closeErr  error
 }
 
 // NewCaptureReader 返回一个 sqlite 后端的 CaptureReader。
@@ -213,4 +219,12 @@ func flattenHeader(h map[string][]string) []map[string]string {
 		}
 	}
 	return out
+}
+
+// Close 释放底层 sqlite 句柄。多次调用安全幂等,返回第一次 Close 的错误。
+// 幂等保护使测试 t.Cleanup 链可任意注册多个,避免在 Windows 上文件锁导致
+// t.TempDir RemoveAll 失败。
+func (r *captureReader) Close() error {
+	r.closeOnce.Do(func() { r.closeErr = r.db.Close() })
+	return r.closeErr
 }

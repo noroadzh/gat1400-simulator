@@ -4,12 +4,20 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/noroadzh/gat1400-simulator/internal/app/ports"
 )
 
 // captureStore ports.CaptureStore 接口的 sqlite 实现。
-type captureStore struct{ db *sql.DB }
+//
+// closeOnce 保证 Close 可以多次调用幂等,避免 t.Cleanup 链中重复
+// 关闭触发 sql.ErrConnDone 或 Windows 上的文件锁冲突。
+type captureStore struct {
+	db        *sql.DB
+	closeOnce sync.Once
+	closeErr  error
+}
 
 // Append 持久化一条 CaptureEntry。
 //
@@ -38,4 +46,10 @@ func (s *captureStore) Append(e ports.CaptureEntry) error {
 	return err
 }
 
-func (s *captureStore) Close() error { return s.db.Close() }
+// Close 释放底层 sqlite 句柄。多次调用安全幂等,返回第一次 Close 的错误。
+// 幂等保护使测试 t.Cleanup 链可任意注册多个,避免在 Windows 上文件锁导致
+// t.TempDir RemoveAll 失败。
+func (s *captureStore) Close() error {
+	s.closeOnce.Do(func() { s.closeErr = s.db.Close() })
+	return s.closeErr
+}

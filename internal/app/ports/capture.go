@@ -35,10 +35,13 @@ type CaptureFilter struct {
 }
 
 // CaptureReader BFF 与导出器使用的抓包读取接口。
+// Close 释放底层 sqlite 句柄;实现必须保证多次调用幂等,以便测试 t.Cleanup
+// 链可任意注册多个,避免在 Windows 上文件锁导致 t.TempDir RemoveAll 失败。
 type CaptureReader interface {
 	Query(filter CaptureFilter) ([]CaptureEntry, error)
 	ExportJSONL(filter CaptureFilter) (string, error)
 	ExportHAR(filter CaptureFilter) (string, error)
+	Close() error
 }
 
 // CaptureStore HTTP 中间件与场景引擎使用的抓包写入接口。实现必须并发安全。

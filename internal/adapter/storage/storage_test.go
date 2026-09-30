@@ -26,7 +26,7 @@ func TestNonceStore_IssueAndConsume(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewNonceStore: %v", err)
 	}
-	defer ns.Close()
+	t.Cleanup(func() { _ = ns.Close() })
 
 	if err := ns.Issue("n-1"); err != nil {
 		t.Fatalf("Issue: %v", err)
@@ -49,7 +49,7 @@ func TestNonceStore_ConsumeAllowsExactlyOneUse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewNonceStore: %v", err)
 	}
-	defer ns.Close()
+	t.Cleanup(func() { _ = ns.Close() })
 
 	if err := ns.Issue("n-1"); err != nil {
 		t.Fatalf("Issue: %v", err)
@@ -79,7 +79,7 @@ func TestNonceStore_ExpiresAfterTTL(t *testing.T) {
 	// Inject a tiny TTL by mutating the field directly — acceptable for tests
 	// because the field is unexported and lives in the same package.
 	ns.ttl = 10 * time.Millisecond
-	defer ns.Close()
+	t.Cleanup(func() { _ = ns.Close() })
 
 	if err := ns.Issue("n-1"); err != nil {
 		t.Fatalf("Issue: %v", err)
@@ -101,13 +101,13 @@ func TestCaptureStore_AppendAndQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCaptureStore: %v", err)
 	}
-	defer cs.Close()
+	t.Cleanup(func() { _ = cs.Close() })
 
 	cr, err := NewCaptureReader(path)
 	if err != nil {
 		t.Fatalf("NewCaptureReader: %v", err)
 	}
-	defer cs.Close()
+	t.Cleanup(func() { _ = cr.Close() })
 
 	now := time.Now().UTC().Truncate(time.Second)
 	for i := 0; i < 5; i++ {
@@ -158,12 +158,12 @@ func TestCaptureStore_QueryFilters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCaptureStore: %v", err)
 	}
-	defer cs.Close()
+	t.Cleanup(func() { _ = cs.Close() })
 	cr, err := NewCaptureReader(path)
 	if err != nil {
 		t.Fatalf("NewCaptureReader: %v", err)
 	}
-	defer cs.Close()
+	t.Cleanup(func() { _ = cr.Close() })
 
 	now := time.Now().UTC()
 	mk := func(node, dir, method, path_ string, status int, ts time.Time) ports.CaptureEntry {
@@ -204,9 +204,9 @@ func TestCaptureReader_ExportJSONL(t *testing.T) {
 	path := tempDB(t)
 	ctx := context.Background()
 	cs, _ := NewCaptureStore(ctx, path)
-	defer cs.Close()
+	t.Cleanup(func() { _ = cs.Close() })
 	cr, _ := NewCaptureReader(path)
-	defer cs.Close()
+	t.Cleanup(func() { _ = cr.Close() })
 
 	now := time.Now().UTC()
 	cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: now})
@@ -237,9 +237,9 @@ func TestCaptureReader_ExportHAR(t *testing.T) {
 	path := tempDB(t)
 	ctx := context.Background()
 	cs, _ := NewCaptureStore(ctx, path)
-	defer cs.Close()
+	t.Cleanup(func() { _ = cs.Close() })
 	cr, _ := NewCaptureReader(path)
-	defer cs.Close()
+	t.Cleanup(func() { _ = cr.Close() })
 
 	cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: time.Now().UTC()})
 

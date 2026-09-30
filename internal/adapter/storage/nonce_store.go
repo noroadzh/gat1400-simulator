@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -15,10 +16,15 @@ var ErrNonceUnknown = errors.New("nonce: unknown")
 const defaultNonceMaxUses = 100
 
 // NonceStore 基于 sqlite 的薄包装。
+//
+// closeOnce 保证 Close 可以多次调用幂等,避免 t.Cleanup 链中重复
+// 关闭触发 sql.ErrConnDone 或 Windows 上的文件锁冲突。
 type NonceStore struct {
-	db      *sql.DB
-	ttl     time.Duration
-	maxUses int
+	db        *sql.DB
+	ttl       time.Duration
+	maxUses   int
+	closeOnce sync.Once
+	closeErr  error
 }
 
 // Issue 签发一个新 nonce 并写入持久化存储（RFC 2617 §3.2.1 步骤 1）。
@@ -65,8 +71,13 @@ func (n *NonceStore) Purge() error {
 	return err
 }
 
-// Close releases the underlying database handle. It is safe to call multiple times.
-func (n *NonceStore) Close() error { return n.db.Close() }
+// Close 释放底层 sqlite 句柄。多次调用安全幂等,返回第一次 Close 的错误。
+// 幂等保护使测试 t.Cleanup 链可任意注册多个,避免在 Windows 上文件锁导致
+// t.TempDir RemoveAll 失败。
+func (n *NonceStore) Close() error {
+	n.closeOnce.Do(func() { n.closeErr = n.db.Close() })
+	return n.closeErr
+}
 
 // MaxUses returns the configured maximum number of reuses per nonce.
 func (n *NonceStore) MaxUses() int {
