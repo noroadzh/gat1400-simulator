@@ -1,48 +1,48 @@
-# Design: GAT 1400 HTTP API Adapter
+# 设计：GA/T 1400 HTTP API 适配器
 
-## Server Layout
+## 服务端结构
 
 ```
 internal/adapter/httpapi/
-├── server.go         # Server struct, route registration, lifecycle
-├── system.go         # /VIID/System/* handlers
-├── collection.go     # /VIID/Persons, Faces, Vehicles, etc.
-├── cascade.go        # /VIID/Subscribes, Notifications, Dispositions
-├── catalog.go        # /VIID/APEs, APSs, Tollgates, Lanes
-├── middleware.go     # DigestAuth, UserIdentify, Capture
-├── binder.go         # Custom binder for VIID+JSON and JSON
-├── config.go         # AuthConfig, route paths
-└── response.go       # Helpers: OKResponse(), NotFound(), etc.
+├── server.go         # Server 结构体、路由注册、生命周期
+├── system.go         # /VIID/System/* 处理器
+├── collection.go     # /VIID/Persons、Faces、Vehicles 等
+├── cascade.go        # /VIID/Subscribes、Notifications、Dispositions
+├── catalog.go        # /VIID/APEs、APSs、Tollgates、Lanes
+├── middleware.go     # DigestAuth、UserIdentify、Capture
+├── binder.go         # VIID+JSON 与 JSON 的自定义 Binder
+├── config.go         # AuthConfig、路由路径
+└── response.go       # 辅助函数：OKResponse()、NotFound() 等
 ```
 
-## Route Table
+## 路由表
 
-| Method | Path | Handler | Auth |
+| 方法 | 路径 | 处理器 | 认证 |
 |---|---|---|---|
 | POST | `/VIID/System/Register` | System/Register | Digest |
 | POST | `/VIID/System/UnRegister` | System/UnRegister | Digest |
 | POST | `/VIID/System/Keepalive` | System/Keepalive | User-Identify |
-| GET  | `/VIID/System/Time` | System/Time | none |
+| GET  | `/VIID/System/Time` | System/Time | 无 |
 | POST/GET/PUT/DELETE | `/VIID/Persons` `/VIID/Persons/:id` | Collection | User-Identify |
-| POST/GET/PUT/DELETE | `/VIID/...` for Face, Vehicle, Plate, Image, etc. | Collection | User-Identify |
+| POST/GET/PUT/DELETE | `/VIID/...` 对应 Face、Vehicle、Plate、Image 等 | Collection | User-Identify |
 | POST/GET/PUT/DELETE | `/VIID/Subscribes` `/VIID/Subscribes/:id` | Cascade | User-Identify |
 | POST/GET | `/VIID/SubscribeNotifications` | Cascade | User-Identify |
 | POST/GET/PUT/DELETE | `/VIID/Dispositions` `/VIID/Dispositions/:id` | Cascade | User-Identify |
-| GET | `/VIID/APEs` `/VIID/APSs` `/VIID/Tollgates` `/VIID/Lanes` | Catalog | none |
+| GET | `/VIID/APEs` `/VIID/APSs` `/VIID/Tollgates` `/VIID/Lanes` | Catalog | 无 |
 
-## Middleware Chain
+## 中间件链
 
-Order matters. The chain applied to all routes is:
+顺序很重要。应用于所有路由的中间件链为：
 
-1. CaptureMiddleware — log before and after, before any other logic
-2. UserIdentifyMiddleware — extracts `User-Identify` header, calls `MarkSeen`
-3. DigestAuthMiddleware — only on protected System routes (Register/UnRegister)
-4. (route handler)
-5. Response serialization
+1. CaptureMiddleware —— 在任何其他逻辑之前记录请求进入与退出
+2. UserIdentifyMiddleware —— 提取 `User-Identify` 请求头，调用 `MarkSeen`
+3. DigestAuthMiddleware —— 仅用于受保护的 System 路由（Register/UnRegister）
+4. （路由处理器）
+5. 响应序列化
 
-The capture middleware uses an in-memory `bytes.Buffer` to record both request and response bodies (only the body is buffered, headers are copied before consumption).
+抓包中间件使用内存中的 `bytes.Buffer` 记录请求体（响应体在请求头被消费之后读取；请求头在消费前拷贝）。
 
-## Digest Auth Details
+## Digest 认证细节
 
 ```
 Server:  Digest realm="<r>", nonce="<n>", qop="auth", opaque=""
@@ -50,20 +50,20 @@ Client:  Authorization: Digest username="u", realm="r", nonce="n", uri="...",
          qop=auth, nc=00000001, cnonce="<c>", response="<h>", algorithm=MD5
 ```
 
-The expected response is:
+期望的响应值计算方式为：
 ```
 MD5(MD5(u:n:r) + ":" + n + ":" + nc + ":" + c + ":" + qop + ":" + MD5(method + ":" + uri))
 ```
 
-The server stores nonce → timestamp in SQLite (`storage.NewNonceStore`). Nonces older than 30s are rejected. Duplicate nonces with the same nc are detected and rejected (replay protection).
+服务端在 SQLite（`storage.NewNonceStore`）中存储 nonce → 时间戳。超过 30s 的 nonce 会被拒绝。带相同 `nc` 的重复 nonce 会被检测并拒绝（重放保护）。
 
 ## Binder
 
-Echo's default binder handles `application/json` but ignores `application/VIID+JSON`. We register a custom binder that delegates to the default binder for both content types. No transformation is needed — VIID+JSON is just JSON with a different MIME marker.
+Echo 的默认 Binder 能处理 `application/json`，但忽略 `application/VIID+JSON`。我们注册一个自定义 Binder，将两种内容类型都委托给默认 Binder 处理。无需做转换——VIID+JSON 本质就是 JSON，只是 MIME 标记不同。
 
-## Capture Middleware Details
+## 抓包中间件细节
 
-Records one Capture per request:
+每个请求记录一条 Capture：
 
 ```go
 type Capture struct {
@@ -80,11 +80,11 @@ type Capture struct {
 }
 ```
 
-The `Recorder` persists to `ports.CaptureStore` (SQLite). Querying is exposed via the BFF (`internal/ui`) but not directly through the protocol server.
+`Recorder` 持久化到 `ports.CaptureStore`（SQLite）。查询接口通过 BFF（`internal/ui`）暴露，但协议服务端本身不直接提供查询。
 
-## Response Envelope
+## 响应信封
 
-All protocol responses include a top-level `ResponseStatus` object:
+所有协议响应都包含一个顶层的 `ResponseStatus` 对象：
 
 ```json
 {
@@ -96,7 +96,7 @@ All protocol responses include a top-level `ResponseStatus` object:
 }
 ```
 
-The Server uses helper functions:
+Server 使用辅助函数：
 
 ```go
 func OK(c echo.Context, body any) error
