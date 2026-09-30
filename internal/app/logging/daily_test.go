@@ -49,6 +49,7 @@ func TestDailyWriter_RotateIsSerialized(t *testing.T) {
 
 	rot := newLumberjackForTest(path)
 	d := newDailyWriter(rot)
+	t.Cleanup(func() { d.stop() })
 
 	var wg sync.WaitGroup
 	for i := 0; i < 16; i++ {

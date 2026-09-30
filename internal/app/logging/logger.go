@@ -240,12 +240,16 @@ func (c *rotatorCloser) Close() error {
 //
 // maybeRotate 由 Write 与后台 ticker 两条路径并发触发，d.last 的读改写与
 // rot.Rotate() 都在 mu 下串行化，避免两条路径在跨天瞬间重复滚动。
+//
+// stopOnce 保证 stop 可以多次调用幂等,避免在 t.Cleanup 链中重复关闭触发
+// 竞争或文件锁冲突（尤其在 Windows CI 环境下）。
 type dailyWriter struct {
-	rot   *lumberjack.Logger
-	mu    sync.Mutex
-	last  time.Time
-	stopC chan struct{}
-	doneC chan struct{}
+	rot      *lumberjack.Logger
+	mu       sync.Mutex
+	last     time.Time
+	stopC    chan struct{}
+	doneC    chan struct{}
+	stopOnce sync.Once
 }
 
 func newDailyWriter(rot *lumberjack.Logger) *dailyWriter {
@@ -289,13 +293,10 @@ func (d *dailyWriter) loop() {
 }
 
 func (d *dailyWriter) stop() {
-	select {
-	case <-d.stopC:
-		// already stopped
-	default:
+	d.stopOnce.Do(func() {
 		close(d.stopC)
-	}
-	<-d.doneC
+		<-d.doneC
+	})
 }
 
 func startOfDayLocal(t time.Time) time.Time {
