@@ -101,10 +101,10 @@
       `event=startup_failure`、run() 返回 ready 替代包级 loggerReady、
       SetStdoutSink 降级为包内私有、FromContext godoc 示例对齐 base、
       countObjects 透传 X-Trace-Id、`Default().Log.Level` 与 yaml 统一为空串）
-- [ ] 7.3 跑 `openspec validate structured-logging --strict`，无错误输出，退出码 0；
+- [x] 7.3 跑 `openspec validate structured-logging --strict`，无错误输出，退出码 0；
       `openspec archive structured-logging` 归档成功，`openspec/specs/logging/spec.md`
       合并完成；完成后 `ls openspec/changes/archive/` 出现
       `2026-09-29-structured-logging`
-- [ ] 7.4 `git add . && git commit -m "feat(logging): 统一结构化日志（profile + 双
+- [x] 7.4 `git add . && git commit -m "feat(logging): 统一结构化日志（profile + 双
       sink + 文件轮转 + trace id 透传）"`；完成后 `git log --oneline -1` 显示新
       commit，`git status` 干净
