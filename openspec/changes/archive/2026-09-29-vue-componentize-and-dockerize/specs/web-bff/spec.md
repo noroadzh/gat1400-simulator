@@ -4,10 +4,7 @@
 
 ### Requirement: BFF MUST 在 / 路径服务嵌入的 Vue3 SPA
 
-BFF MUST NOT embed or serve the frontend SPA. The SPA MUST be a standalone Vue 3
-build artifact served by a dedicated nginx container on port 80. The backend (port
-14080) MUST be a pure API + WebSocket server. A reverse proxy MUST route `/api/` and `/ws/`
-to the backend, and all other paths to the SPA.
+BFF MUST NOT embed 或服务前端 SPA。SPA MUST 是独立的 Vue 3 构建产物，由专用 nginx 容器在 80 端口服务。后端（14080 端口）MUST 是纯 API + WebSocket 服务器。反向代理 MUST 将 `/api/` 与 `/ws/` 路由到后端，其余所有路径路由到 SPA。
 
 #### Scenario: 未知前端路径
 
@@ -32,22 +29,22 @@ to the backend, and all other paths to the SPA.
 - **WHEN** 客户端建立 `ws://host/ws/events`（或任意 `/ws/*` 路径）
 - **THEN** BFF MUST 升级协议为 WebSocket（MUST NOT 回退到 `index.html`）
 
-#### Scenario: Frontend served by nginx, not by BFF
+#### Scenario: 前端由 nginx 提供而非 BFF
 
-- **WHEN** browser requests any non-API path on the frontend container (e.g. `/`, `/dashboard`)
-- **THEN** nginx returns `index.html` or the matching static asset
-- **AND** the Go binary has no `//go:embed` directive for `internal/ui/dist/`
+- **WHEN** 浏览器请求前端容器上的任意非 API 路径（如 `/`、`/dashboard`）
+- **THEN** nginx 返回 `index.html` 或匹配的静态资源
+- **AND** Go 二进制中不存在针对 `internal/ui/dist/` 的 `//go:embed` 指令
 
-#### Scenario: API path unaffected by nginx SPA fallback
+#### Scenario: API 路径不受 nginx SPA fallback 影响
 
-- **WHEN** frontend requests `/api/control/nodes` on port 8080
-- **THEN** nginx proxies to `http://backend:14080/api/control/nodes`
-- **AND** returns JSON (not the SPA fallback)
+- **WHEN** 前端在 8080 端口请求 `/api/control/nodes`
+- **THEN** nginx 代理到 `http://backend:14080/api/control/nodes`
+- **AND** 返回 JSON（而非 SPA fallback）
 
-#### Scenario: WebSocket path proxied with upgrade headers
+#### Scenario: WebSocket 路径带 upgrade 头代理
 
-- **WHEN** frontend opens `ws://localhost:8080/ws/events`
-- **THEN** nginx proxies to `http://backend:14080/ws/events` with `Upgrade` and `Connection` headers
+- **WHEN** 前端打开 `ws://localhost:8080/ws/events`
+- **THEN** nginx 携带 `Upgrade` 与 `Connection` 头代理到 `http://backend:14080/ws/events`
 
 ---
 
@@ -55,99 +52,98 @@ to the backend, and all other paths to the SPA.
 
 ### Requirement: Frontend Build Pipeline
 
-The frontend MUST be built with Vite and MUST output to `web/dist/`. The nginx container
-MUST be the runtime serving the built SPA, NOT the Go binary.
+前端 MUST 使用 Vite 构建，MUST 输出到 `web/dist/`。nginx 容器 MUST 是服务构建后 SPA 的运行时，而非 Go 二进制。
 
-#### Scenario: npm build produces dist
+#### Scenario: npm build 产出 dist
 
-- **WHEN** developer runs `npm run build` in `web/`
-- **THEN** `web/dist/` contains `index.html` and `assets/` chunks
-- **AND** `index.html` contains a `<script type="module">` tag loading the Vite bundle
+- **WHEN** 开发者在 `web/` 中运行 `npm run build`
+- **THEN** `web/dist/` 包含 `index.html` 与 `assets/` chunks
+- **AND** `index.html` 含有加载 Vite bundle 的 `<script type="module">` 标签
 
-#### Scenario: dist is gitignored
+#### Scenario: dist 被 gitignore
 
-- **WHEN** `git status` is run after a build
-- **THEN** `web/dist/` does not appear (it is in `.gitignore`)
+- **WHEN** 构建后运行 `git status`
+- **THEN** `web/dist/` 不出现（它已在 `.gitignore` 中）
 
 ### Requirement: Containerization
 
-The project MUST be containerized with Docker multi-stage builds and orchestrated with docker-compose.
+项目 MUST 使用 Docker 多阶段构建容器化，并用 docker-compose 编排。
 
-#### Scenario: Docker multi-stage frontend build
+#### Scenario: Docker 多阶段前端构建
 
-- **GIVEN** `Dockerfile.frontend` with build stage `node:20-alpine` and runtime stage `nginx:alpine`
-- **WHEN** `docker build -f Dockerfile.frontend .` succeeds
-- **THEN** the image exposes port 80 and serves the SPA at `/`
+- **GIVEN** `Dockerfile.frontend` 构建阶段为 `node:20-alpine`、运行阶段为 `nginx:alpine`
+- **WHEN** `docker build -f Dockerfile.frontend .` 成功
+- **THEN** 镜像暴露 80 端口并在 `/` 服务 SPA
 
-#### Scenario: Docker multi-stage backend build
+#### Scenario: Docker 多阶段后端构建
 
-- **GIVEN** `Dockerfile.backend` with build stage `golang:1.25-alpine` and runtime stage `gcr.io/distroless/static-debian12`
-- **WHEN** `docker build -f Dockerfile.backend .` succeeds
-- **THEN** the image exposes port 14080 and runs the gat1400-sim binary
+- **GIVEN** `Dockerfile.backend` 构建阶段为 `golang:1.25-alpine`、运行阶段为 `gcr.io/distroless/static-debian12`
+- **WHEN** `docker build -f Dockerfile.backend .` 成功
+- **THEN** 镜像暴露 14080 端口并运行 gat1400-sim 二进制
 
-#### Scenario: docker-compose orchestration
+#### Scenario: docker-compose 编排
 
-- **GIVEN** `docker-compose.yml` defines services `frontend` and `backend`
-- **WHEN** `docker-compose up` succeeds
-- **THEN** frontend is reachable at `http://localhost:8080`, backend at `http://localhost:14080`
-- **AND** backend health check passes before frontend starts
+- **GIVEN** `docker-compose.yml` 定义 `frontend` 与 `backend` 服务
+- **WHEN** `docker-compose up` 成功
+- **THEN** frontend 可在 `http://localhost:8080` 访问，backend 可在 `http://localhost:14080` 访问
+- **AND** backend 健康检查在 frontend 启动前通过
 
-### Requirement: CI must verify frontend build
+### Requirement: CI 必须验证前端构建
 
-CI MUST run a frontend job on every branch, and the test/build jobs MUST depend on it.
+CI MUST 在每个分支运行 frontend job，test/build job MUST 依赖它。
 
 #### Scenario: Frontend CI job
 
-- **WHEN** CI runs
-- **THEN** a `frontend` job runs `npm ci && npm run build && npm run typecheck` in `web/`
-- **AND** uploads `frontend-dist` artifact
+- **WHEN** CI 运行
+- **THEN** `frontend` job 在 `web/` 中执行 `npm ci && npm run build && npm run typecheck`
+- **AND** 上传 `frontend-dist` artifact
 
-#### Scenario: Test job depends on frontend build
+#### Scenario: Test job 依赖前端构建
 
-- **WHEN** CI runs
-- **THEN** the `test` job has `needs: [frontend]`
+- **WHEN** CI 运行
+- **THEN** `test` job 声明 `needs: [frontend]`
 
-### Requirement: nginx SPA fallback and reverse proxy
+### Requirement: nginx SPA fallback 与反向代理
 
-nginx MUST implement SPA fallback and MUST reverse-proxy API and WebSocket paths.
+nginx MUST 实现 SPA fallback，MUST 反向代理 API 与 WebSocket 路径。
 
-#### Scenario: SPA fallback on unknown path
+#### Scenario: 未知路径上的 SPA fallback
 
-- **WHEN** browser requests `/some/unknown/route` on the frontend container
-- **THEN** nginx returns `index.html` with HTTP 200
+- **WHEN** 浏览器请求前端容器上的 `/some/unknown/route`
+- **THEN** nginx 以 HTTP 200 返回 `index.html`
 
-#### Scenario: API reverse proxy
+#### Scenario: API 反向代理
 
-- **WHEN** browser requests `/api/control/nodes` on port 8080
-- **THEN** nginx proxies to `http://backend:14080/api/control/nodes`
+- **WHEN** 浏览器在 8080 端口请求 `/api/control/nodes`
+- **THEN** nginx 代理到 `http://backend:14080/api/control/nodes`
 
-#### Scenario: WebSocket reverse proxy
+#### Scenario: WebSocket 反向代理
 
-- **WHEN** browser opens WebSocket `/ws/events` on port 8080
-- **THEN** nginx proxies to `http://backend:14080/ws/events` with HTTP 1.1 upgrade headers
+- **WHEN** 浏览器在 8080 端口打开 WebSocket `/ws/events`
+- **THEN** nginx 携带 HTTP 1.1 upgrade 头代理到 `http://backend:14080/ws/events`
 
 ## Architecture Decisions
 
-### AD-FRONTEND-001: Vite as build tool (over webpack)
+### AD-FRONTEND-001: Vite 作为构建工具（而非 webpack）
 
-- **DECISION**: Use Vite 5 as the frontend build tool
-- **RATIONALE**: Faster HMR, simpler config, native ESM dev server, first-class Vue 3 support
-- **CONSEQUENCE**: Developers must run `npm install` before `npm run dev`
+- **DECISION**：前端构建工具使用 Vite 5
+- **RATIONALE**：HMR 更快、配置更简单、原生 ESM dev server、对 Vue 3 一流支持
+- **CONSEQUENCE**：开发者必须在 `npm run dev` 之前运行 `npm install`
 
-### AD-FRONTEND-002: npm as package manager (over pnpm)
+### AD-FRONTEND-002: npm 作为包管理器（而非 pnpm）
 
-- **DECISION**: Use npm with `package-lock.json`
-- **RATIONALE**: Simplest CI integration (`actions/setup-node` has native npm cache support)
-- **CONSEQUENCE**: `npm ci` in CI (not `pnpm install`)
+- **DECISION**：使用 npm 与 `package-lock.json`
+- **RATIONALE**：CI 集成最简单（`actions/setup-node` 原生支持 npm 缓存）
+- **CONSEQUENCE**：CI 中使用 `npm ci`（而非 `pnpm install`）
 
-### AD-FRONTEND-003: Separate frontend container (over embedded SPA)
+### AD-FRONTEND-003: 独立前端容器（而非内嵌 SPA）
 
-- **DECISION**: Serve SPA from a dedicated nginx container, not from the Go binary
-- **RATIONALE**: Independent scaling, smaller Go binary (no embed), standard production pattern
-- **CONSEQUENCE**: Backend is pure API + WS server; `static.go` is removed; `go build` no longer depends on `web/dist/`
+- **DECISION**：SPA 由专用 nginx 容器服务，而非 Go 二进制
+- **RATIONALE**：独立扩缩、Go 二进制更小（无 embed）、标准生产模式
+- **CONSEQUENCE**：后端是纯 API + WS 服务器；`static.go` 被删除；`go build` 不再依赖 `web/dist/`
 
-### AD-FRONTEND-004: Element Plus full import (over tree-shaking)
+### AD-FRONTEND-004: Element Plus 全量引入（而非 tree-shaking）
 
-- **DECISION**: Import all of Element Plus (`import ElementPlus from 'element-plus'`)
-- **RATIONALE**: Simpler setup, smaller maintenance surface for v1
-- **CONSEQUENCE**: Larger JS bundle; optimize later if bundle size becomes a concern
+- **DECISION**：全量引入 Element Plus（`import ElementPlus from 'element-plus'`）
+- **RATIONALE**：搭建更简单，v1 维护面更小
+- **CONSEQUENCE**：JS bundle 更大；若 bundle 体积成为问题后续再优化
