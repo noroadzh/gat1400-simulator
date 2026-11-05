@@ -76,6 +76,22 @@ CI Lint job MUST 在仓库代码无 lint issue 时退出码 0，且 MUST NOT 因
 - **THEN** 若 `.github/workflows/ci.yml` 的 lint job `version` 字段未相应升级，CI MUST 在合并前失败
 - **AND** 维护者 MUST 在合并前完成 lint 版本对齐
 
+### Requirement: Test job 覆盖率统计 MUST 使用归一口径
+
+CI 的 `go test` 步骤 MUST 传 `-coverpkg=./internal/...,./cmd/...` 与 `-coverprofile=coverage.out`；覆盖率 MUST 针对上述包集合计算。`coverage.out` MUST 作为 artifact 上传（保留 ≥7 天）。`test/contract` 与 `test/e2e` 触达的生产代码 MUST 计入该口径。
+
+#### Scenario: 默认覆盖率模式（反例）
+
+- **WHEN** `go test ./...` 不带 `-coverpkg`
+- **THEN** 各包自测覆盖率互相孤立，跨包测试可能显示 `[no statements]`
+- **AND** MUST NOT 将此孤立数字当作门禁依据
+
+#### Scenario: 归一口径修复后
+
+- **WHEN** CI Test job 使用 `-coverpkg=./internal/...,./cmd/... -coverprofile=coverage.out`
+- **THEN** 端到端与契约测试中触达的生产代码 MUST 计入覆盖率
+- **AND** `coverage.out` MUST 可被 `go tool cover` 解析并作为 artifact 上传
+
 ## Out of Scope
 
 本 capability 不约束下列平台级 CI 噪声——它们由 GitHub Actions 平台侧控制，与本仓库代码无关：

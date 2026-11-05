@@ -4,6 +4,20 @@
 
 ---
 
+## change — 2026-11-05 — refine-test-coverage
+
+**状态：** 已归档（`openspec/changes/archive/2026-11-05-refine-test-coverage/`）
+
+### 变更内容
+
+- 覆盖率归一口径：CI / `Makefile` `-coverpkg=./internal/...,./cmd/...` + `coverage.out`
+- 主 `testing`：废除导语「≥90%」，保留分层目标 Requirement
+- 新建主 capability `end-to-end-testing`；`ci-quality-gates` 追加 Test cover 口径
+- `scenario`：Stop 引擎错误显式 `log.Warn`；`ScenarioService.Stop` 实现同步
+- Engine 单元测试 / design.md / tasks 收尾
+
+---
+
 ## change-007 — 2026-09-28
 
 **ID：** `testing-and-docs`  

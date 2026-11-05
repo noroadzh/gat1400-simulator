@@ -65,6 +65,16 @@
 - **WHEN** 调用 `engine.Start(ctx, s)`，无视 `Schedule.AutoStart` 字段值
 - **THEN** `engine.IsRunning(id)` MUST 返回 `true`。
 
+### Requirement: 场景引擎 Stop 路径错误 MUST 显式处理
+
+`ScenarioService.Stop` 调用 `engine.Stop(id)` 的错误 MUST NOT 用 `_ =` 静默忽略。收到错误时 MUST 记 `log.Warn`（含 scenario id）；业务上场景已移出运行集，方法仍返回 nil（HTTP 仍为成功语义）。
+
+#### Scenario: Stop 引擎失败被记录
+
+- **WHEN** `engine.Stop(id)` 返回非 nil 错误
+- **THEN** 日志 MUST 含 `scenario_stop_engine_error`（或等价）与该 scenario id
+- **AND** `ScenarioService.Stop` MUST 仍返回 nil
+
 ### Requirement: ResourceFactory MUST 产出确定性 ID
 
 对同一 `seed` 与 `seq`，工厂 MUST 在每次调用时产出相同的 `Resource.ID`。该特性对黄金样本测试至关重要。

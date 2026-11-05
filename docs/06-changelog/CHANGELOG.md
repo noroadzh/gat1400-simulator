@@ -6,6 +6,11 @@
 
 ## [未发布]
 
+### chore(openspec) — 打通 plan↔OpenSpec 并归档 refine-test-coverage
+
+- `.cursor/rules/docs-and-openspec.mdc` / `.cursorrules`：非琐碎改动须 OpenSpec change + `.cursor/plan` 成对
+- 归档 `refine-test-coverage`：分层覆盖率、`end-to-end-testing` 主 spec、CI cover 口径、Stop 错误日志
+
 ### feat(protocol,bff,web) — P1→P3：集合操作/分页/持久化与控制面补齐
 
 - P1：集合级 `PUT/DELETE /VIID/<Collection>`；列表 `PageRecordNum`/`RecordStartNo` + 字段过滤 + `TotalNum`；Catalog 单条 GET；SQLite `viid_object` 持久化资源/Catalog/Cascade/VIIDServers/VIAS

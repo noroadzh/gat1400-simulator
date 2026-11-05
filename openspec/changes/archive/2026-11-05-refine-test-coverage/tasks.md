@@ -21,15 +21,18 @@
 
 ## 4. spec 修订
 
-- [x] 4.1 主 `testing/spec.md` 分层目标
-- [ ] 4.2 `ci-quality-gates` 主 spec 追加（可选，后续 archive 时合并 delta）
-- [ ] 4.3 新建 `end-to-end-testing` 主 spec（可选，后续 archive 时合并）
+- [x] 4.1 主 `testing/spec.md` 分层目标（并修正导语「≥90%」冲突）
+- [x] 4.2 `ci-quality-gates` 主 spec 追加覆盖率归一口径
+- [x] 4.3 新建主 capability `end-to-end-testing`
+- [x] 4.4 `scenario` 主 spec 合入 Stop 错误显式处理；代码 `log.Warn`
 
 ## 5. 本地验证
 
 - [x] 5.1 代码改动落地
-- [ ] 5.2–5.4 完整验证命令（实现后在本机/CI 跑）
+- [x] 5.2 `go test ./internal/adapter/scenario/ ./internal/app/application/ -count=1`
+- [x] 5.3 CI/`Makefile` 已含 coverprofile（与主 spec 对齐）
+- [x] 5.4 design.md 补齐
 
 ## 6. 归档
 
-- [ ] 6.1–6.4 待用户确认后执行 `openspec archive refine-test-coverage`
+- [x] 6.1–6.4 同步主 specs 后执行 archive

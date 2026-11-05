@@ -1,6 +1,6 @@
 ---
 description: 文档与 OpenSpec 变更管理约定
-globs: "docs/**/*.md,openspec/**/*.md,openspec/**/*.yaml"
+globs: "docs/**/*.md,openspec/**/*.md,openspec/**/*.yaml,.cursor/plan/**/*.md"
 alwaysApply: false
 ---
 
@@ -20,11 +20,31 @@ alwaysApply: false
 | 2† 国标对照 | `07-standards/` | 国标 PDF（只读，勿改） |
 
 协议行为变更：先改代码与测试，再更新 `02-protocol/PROTOCOL.md` / `06-changelog/CHANGELOG.md`。
-执行 plan 写到 `.cursor/plan/`，不要写进 `docs/` 或仓库根。
+
+## OpenSpec ↔ `.cursor/plan` 打通（强制）
+
+二者职责不同，**必须成对出现**，禁止只写 plan 就改非琐碎代码：
+
+| 产物 | 路径 | 职责 |
+|------|------|------|
+| OpenSpec change | `openspec/changes/<name>/` | 权威：proposal / design / specs delta / **tasks** |
+| 执行 plan | `.cursor/plan/<name>.md` 或 `.cursor/plan/YYYYMMDD-<name>.md` | 执行备忘：进度、命令、风险；**首行须写明对应 change 名** |
+
+### 工作流
+
+1. **开干前**：`openspec new change` / propose（或 continue 已有 change）；再写/更新 `.cursor/plan/<同名>.md`
+2. **实现中**：只勾 `openspec/changes/<name>/tasks.md`；plan 只记「做到哪一步 / 阻塞」
+3. **收尾**：tasks 全勾 → 同步主 `openspec/specs/` → `openspec archive`（或按 archive skill 归档）→ plan 标 `状态：已归档` 或删除
+4. **琐碎例外**（可无 change）：单行 typo、纯格式、已归档 change 的文档路径笔误；仍建议在 `docs/06-changelog` 留一行
+
+### Agent 自检
+
+- 若即将改 3+ 文件或协议/API/CI：先查 `openspec list`，无匹配 change 则先建 change 再写 plan
+- 禁止把 OpenSpec proposal/tasks 写进 `docs/`；禁止把执行 plan 写进仓库根
 
 ## OpenSpec（本地）
 
-- `openspec/specs/`：主规格；`openspec/changes/`：在途变更
+- `openspec/specs/`：主规格；`openspec/changes/`：在途变更；`openspec/changes/archive/`：已归档
 - 动手前阅读当前 change 的 proposal / design / tasks
 - 以 Spec Requirement/Scenario 为验收标准；冲突时改 OpenSpec 再写代码
 - 只做 tasks 中未完成项；结束时列出完成的 task 编号

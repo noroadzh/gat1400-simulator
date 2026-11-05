@@ -45,8 +45,9 @@ domain 仅标准库；禁止跨层反向依赖
 4. Cascade POST 删除优先于创建（`*IDList` / `DeleteOperate`）
 5. e2e 禁止 mock HTTP 层；必须真实 socket
 6. 前端控制面只走 `/api/control/*`；资源 URI 用 `/VIID/<Collection>`
-7. 中文文档优先（`docs/0N-*/`）；执行 plan 写入 `.cursor/plan/`，勿散落仓库根
-8. 不提交密钥、`data/*.db`、`web/node_modules`、`openspec/`（若已 gitignore）
+7. 中文文档优先（`docs/0N-*/`）；执行 plan → `.cursor/plan/`，且须对应 `openspec/changes/<name>`（见 docs-and-openspec 规则）
+8. 非琐碎改动禁止「只写 plan 不写 OpenSpec」；收尾须 archive
+9. 不提交密钥、`data/*.db`、`web/node_modules`
 
 ## 常用命令
 

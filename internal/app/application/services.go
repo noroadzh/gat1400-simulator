@@ -298,7 +298,13 @@ func (s *ScenarioService) Stop(_ context.Context, id string) error {
 	s.mu.Unlock()
 
 	if s.engine != nil {
-		_ = s.engine.Stop(id)
+		if err := s.engine.Stop(id); err != nil {
+			s.log.Warn("engine stop failed",
+				slog.String("event", "scenario_stop_engine_error"),
+				slog.String("scenario_id", id),
+				slog.String("error", err.Error()),
+			)
+		}
 	}
 	s.log.Info("scenario stopped",
 		slog.String("event", "scenario_stop"),

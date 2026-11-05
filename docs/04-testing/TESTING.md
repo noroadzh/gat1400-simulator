@@ -139,20 +139,26 @@ net.Listen("tcp", "127.0.0.1:0")   ← 真实 TCP
 
 ## 五、覆盖率
 
-### 5.1 生成覆盖率报告
+### 5.1 生成覆盖率报告（归一口径）
+
+与 CI / `make test` 一致：
 
 ```bash
-go test -coverprofile=cover.out ./internal/...
-go tool cover -html=cover.out -o cover.html
+go test -race -count=1 -coverpkg=./internal/...,./cmd/... -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out | tail -n 20
+go tool cover -html=coverage.out -o cover.html
 ```
 
-### 5.2 覆盖率门槛
+### 5.2 覆盖率门槛（分层，非一刀切 90%）
 
-CI 强制要求 `internal/` 下每个包达到 ≥ 90% 行覆盖率。
+| 层级 | 目标 |
+|------|------|
+| `internal/domain/**`、`internal/app/ports/**` | ≥ 95% |
+| `internal/adapter/scenario/**` | ≥ 80% |
+| 其余 `internal/adapter/**`、`internal/ui/**` | ≥ 70% |
+| `cmd/gat1400-sim/**` | ≥ 50% |
 
-```bash
-go test -cover ./internal/... 2>&1 | grep -E "^(ok|---|\s+github)"
-```
+低于目标的包须在 PR 中显式豁免。契约见 `openspec/specs/testing/spec.md` 与 `end-to-end-testing`。
 
 ## 六、Mock 策略
 
@@ -176,12 +182,10 @@ svc := NewNodeService(logger, &mockNodeStore{...})
 CI 按以下顺序运行：
 
 1. **Lint**：`golangci-lint run ./...`
-2. **单元测试**：`go test -race ./internal/...`
-3. **契约测试**：`go test -v ./test/contract/...`
-4. **端到端测试**：`go test -v ./test/e2e/...`
-5. **覆盖率门禁**：`go test -cover ./...` —— 任一包 < 90% 即失败
+2. **测试 + 覆盖率产物**：`go test -race -coverpkg=./internal/...,./cmd/... -coverprofile=coverage.out ./...`（上传 artifact，非一刀切 90% 红灯）
+3. **契约 / e2e**：含于上述 `./...`（亦见 `test/contract`、`test/e2e`）
 
-任意一步失败都将阻断合并到 `main`。
+Lint / Test 失败将阻断合并到 `main`；覆盖率以产物审计 + 分层目标为准。
 
 ## 八、调试技巧
 

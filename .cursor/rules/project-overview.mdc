@@ -48,3 +48,4 @@ docker-compose up -d    # :8080
 - 不擅自扩大范围；不 invent 非标准 Content-Type / StatusCode
 - 密钥不入库；默认 Digest `admin/admin` 仅本地开发
 - 详细规范见同目录其它 rules；文档索引见 `docs/README.md`
+- 非琐碎改动：OpenSpec change + `.cursor/plan/<change>.md` 成对（见 `docs-and-openspec.mdc`）
