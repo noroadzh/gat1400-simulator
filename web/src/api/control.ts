@@ -159,6 +159,12 @@ export const controlApi = {
   // Config
   getConfig: () => request<Record<string, unknown>>('/config'),
 
+  // Cascade 控制面（透传协议端 Subscribes / Dispositions）
+  getSubscriptions: () =>
+    request<{ items: unknown[]; ResponseStatus?: unknown }>('/subscriptions'),
+  getDispositions: () =>
+    request<{ items: unknown[]; ResponseStatus?: unknown }>('/dispositions'),
+
   // Resources（GA/T 1400.4 资源对象控制面）
   listResourceKinds: () =>
     request<{ kinds: ResourceKindMeta[] }>('/resources'),

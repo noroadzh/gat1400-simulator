@@ -191,7 +191,8 @@ func buildSink(cfg *config.LogConfig) (io.Writer, func() error, error) {
 		var daily *dailyWriter
 		rotMode := strings.ToLower(strings.TrimSpace(cfg.Rotation))
 		if rotMode == RotationDaily || rotMode == RotationDay {
-			daily = newDailyWriter(rot)
+			// 轮转失败走 stderr 兜底 logger，避免在 New 完成前形成循环依赖。
+			daily = newDailyWriter(rot, slog.Default())
 			w = daily
 		}
 		writers = append(writers, w)
@@ -245,6 +246,7 @@ func (c *rotatorCloser) Close() error {
 // 竞争或文件锁冲突（尤其在 Windows CI 环境下）。
 type dailyWriter struct {
 	rot      *lumberjack.Logger
+	log      *slog.Logger
 	mu       sync.Mutex
 	last     time.Time
 	stopC    chan struct{}
@@ -252,9 +254,13 @@ type dailyWriter struct {
 	stopOnce sync.Once
 }
 
-func newDailyWriter(rot *lumberjack.Logger) *dailyWriter {
+func newDailyWriter(rot *lumberjack.Logger, log *slog.Logger) *dailyWriter {
+	if log == nil {
+		log = slog.Default()
+	}
 	d := &dailyWriter{
 		rot:   rot,
+		log:   log,
 		last:  startOfDayLocal(time.Now()),
 		stopC: make(chan struct{}),
 		doneC: make(chan struct{}),
@@ -273,7 +279,11 @@ func (d *dailyWriter) maybeRotate() {
 	defer d.mu.Unlock()
 	today := startOfDayLocal(time.Now())
 	if today.After(d.last) {
-		_ = d.rot.Rotate()
+		if err := d.rot.Rotate(); err != nil {
+			d.log.Error("log rotation failed",
+				slog.String("event", "log_rotate_failed"),
+				slog.String("error", err.Error()))
+		}
 		d.last = today
 	}
 }

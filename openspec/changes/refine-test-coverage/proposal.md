@@ -1,5 +1,8 @@
 # Proposal
 
+> 注：主 `openspec/specs/testing/spec.md` 已手动合入分层覆盖率 Requirement；归档时若 delta
+> 与主 spec 冲突，以主 spec 为准，可跳过 testing ADDED 或先 REMOVED 再 ADDED。
+
 ## Why
 
 `openspec/specs/testing/spec.md` 声明「`internal/` 包 MUST ≥ 90% 覆盖率」,但实测仓库从未通过 `-coverpkg=./internal/...` 跑整体覆盖率:  `go test -cover` 的输出里 `test/contract`、`test/e2e` 都是 `[no statements]`,各包自测覆盖率是孤立数据。  实际数字里 4 个包低于 80%(`scenario 35.0%`、`httpapi 60.6%`、`ui 75.4%`、`storage 78.5%`、`wire 78.7%`),`cmd 3.7%`。  这条 Requirement 与现实长期脱节,既没有 CI 门槛兜底也没有能力补足,实际等于名存实亡。

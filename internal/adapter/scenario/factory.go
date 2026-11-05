@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/noroadzh/gat1400-simulator/internal/adapter/media"
 	"github.com/noroadzh/gat1400-simulator/internal/domain/ids"
 	"github.com/noroadzh/gat1400-simulator/internal/domain/resource"
 )
@@ -138,7 +139,12 @@ func (f *Factory) wrapFace(kind resource.Kind, id, now string) map[string]any {
 		"Feature":      base64Short(),
 		"SubImageList": map[string]any{
 			"SubImageObject": []any{
-				map[string]any{"ImageID": f.idGen.UUID(), "Data": "https://example.com/sim/face.jpg"},
+				map[string]any{
+					"ImageID":    f.idGen.UUID(),
+					"Type":       "14",
+					"FileFormat": "Jpeg",
+					"Data":       media.PlaceholderJPEGBase64(),
+				},
 			},
 		},
 		"FaceRect":  map[string]any{"Left": 10, "Top": 20, "Right": 60, "Bottom": 70},

@@ -239,8 +239,16 @@ User-Identify: <device-id>
 
 #### 4.2.8 Info / Data 子资源
 
-Info 与 Data 子资源为占位实现：GET 时返回父对象本身（外层包 `Info` 字段），POST/PUT/DELETE
-均接受并返回 `200 OK`。生产实现可在此处扩展为完整元信息或二进制数据载荷。
+Info 与 Data 与父对象**分表存储**：
+
+- `GET .../Info`：若已写入 Info 则返回之；否则返回派生摘要 `{<IDField>, Kind, Source:"derived"}`
+- `PUT .../Info`：写入/覆盖 Info（父对象必须已存在）
+- `DELETE .../Info`：清除 Info
+- `GET .../Data`：返回已存储 Data 信封（无则空对象）
+- `POST|PUT .../Data`：写入/覆盖 Data
+- `DELETE .../Data`：清除 Data
+
+删除父对象时同步清除其 Info/Data。
 
 #### 4.2.9 错误码
 
@@ -317,14 +325,22 @@ Info 与 Data 子资源为占位实现：GET 时返回父对象本身（外层�
 
 ### 4.4 目录类（Catalog）
 
-> 备注：以下路由不需要任何认证，由模拟器静态提供。
+> 备注：目录为进程内动态编目（带种子数据）；无需 Digest。支持 POST 批量写入与 DELETE 按 ID 删除。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/VIID/APEs` | 卡口实体（Access Point Entity） |
-| GET | `/VIID/APSs` | 卡口服务器 |
-| GET | `/VIID/Tollgates` | 收费站 |
+| POST/PUT | `/VIID/APEs` | 批量 upsert（`APEList.APEObject[]`） |
+| DELETE | `/VIID/APEs/:id` | 按 APEID 删除 |
+| GET | `/VIID/APSs` | 应用平台 |
+| POST | `/VIID/APSs` | 批量 upsert |
+| DELETE | `/VIID/APSs/:id` | 按 APSID 删除 |
+| GET | `/VIID/Tollgates` | 收费站 / 卡口 |
+| POST | `/VIID/Tollgates` | 批量 upsert |
+| DELETE | `/VIID/Tollgates/:id` | 按 TollgateID 删除 |
 | GET | `/VIID/Lanes` | 车道 |
+| POST | `/VIID/Lanes` | 批量 upsert |
+| DELETE | `/VIID/Lanes/:id` | 按 LaneID 删除 |
 
 响应示例：
 

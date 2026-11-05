@@ -73,15 +73,15 @@ AnalysisRules）。
 - **WHEN** 客户端 DELETE `/VIID/Persons/p1` 后再 GET `/VIID/Persons/p1`
 - **THEN** 服务端 MUST 在第二次 GET 时返回 `404 Not Found`
 
-### Requirement: Info/Data 子资源占位实现
+### Requirement: Info/Data 子资源独立存储
 
 服务端 MUST 在 `/VIID/<Collection>/:id/Info` 与 `/VIID/<Collection>/:id/Data` 注册
-GET/PUT/POST/DELETE 端点。当前实现为占位：返回父对象本身（Info）或后续可扩展为元信息
-/ 二进制数据载荷。生产实现可在此处扩展为完整 Info 资源对象。
+GET/PUT/POST/DELETE 端点。Info 与 Data MUST 与父对象分表存储；未写入 Info 时 GET MAY
+返回派生摘要 `{<IDField>, Kind, Source:"derived"}`；删除父对象 MUST 同步清除 Info/Data。
 
-#### Scenario: Info 子资源 GET 返回父对象
-- **WHEN** 客户端 GET `/VIID/Persons/p1/Info` 且 `p1` 已存在
-- **THEN** 服务端 MUST 返回 `200 OK`，body `{"ResponseStatus":{...},"Info":{<Person>}}`
+#### Scenario: Info 子资源 GET 派生摘要
+- **WHEN** 客户端 GET `/VIID/Persons/p1/Info` 且 `p1` 已存在但未写入 Info
+- **THEN** 服务端 MUST 返回 `200 OK`，body 含 `Info` 字段且包含 `PersonID` / `Kind`
 
 ### Requirement: 主键字段映射按 Kind 区分
 

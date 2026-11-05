@@ -6,6 +6,13 @@
 
 ## [未发布]
 
+### feat — 四项优先级：错误处理收尾 / 订阅 BFF / 覆盖率 / 协议深度
+
+- harden：日志日轮转失败改为 Error 日志（`event=log_rotate_failed`）
+- BFF：`/api/control/subscriptions`、`/dispositions`、`/config`；前端订阅页去掉 coming-soon
+- 测试：`Engine` 单元测试；CI/`make test` 产出 `coverage.out`
+- 协议：Info/Data 独立存储；Catalog 支持 POST upsert + DELETE；`generator`/`media` 最小可用（占位 JPEG）
+
 ### chore(docs,cursor) — 文档整理与 Cursor Rules
 
 - `docs/` 增加索引 [README.md](./README.md)；国标 PDF 迁入 `docs/standards/`

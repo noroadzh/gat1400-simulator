@@ -208,6 +208,9 @@ deviceID := idGen.DeviceID() // 例如 "41000000300101000001"
 | PUT    | `/api/control/resources/:kind/list/:id` | 更新资源（透传协议端 `PUT /VIID/<Collection>/:id`） |
 | DELETE | `/api/control/resources/:kind/list/:id` | 删除资源（透传协议端 `DELETE /VIID/<Collection>/:id`） |
 | GET    | `/api/control/resources/:kind/list/:id/info` | Info 子资源（透传协议端 `GET /VIID/<Collection>/:id/Info`） |
+| GET    | `/api/control/subscriptions` | 订阅列表（透传 `GET /VIID/Subscribes`） |
+| GET    | `/api/control/dispositions` | 布控列表（透传 `GET /VIID/Dispositions`） |
+| GET    | `/api/control/config` | 控制面只读配置摘要 |
 | GET    | `/ws/events` | WebSocket 实时事件 |
 
 ## 六、WebSocket 事件

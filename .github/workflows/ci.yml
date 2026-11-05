@@ -45,7 +45,24 @@ jobs:
           cache: true
       - run: go mod download
       - run: go vet ./...
-      - run: go test -race -count=1 ./...
+      - name: Test with coverage
+        run: go test -race -count=1 -coverpkg=./internal/...,./cmd/... -coverprofile=coverage.out ./...
+      - name: Coverage summary
+        if: runner.os == 'Linux'
+        run: |
+          {
+            echo '### Coverage (tail)'
+            echo '```'
+            go tool cover -func=coverage.out | tail -n 20
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage.out
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: coverage-out
+          path: coverage.out
+          retention-days: 7
 
   lint:
     name: Lint

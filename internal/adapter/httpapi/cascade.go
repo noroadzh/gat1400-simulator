@@ -101,6 +101,26 @@ func (r *subscribeRepo) delete(id string) {
 	delete(r.notifs, id)
 }
 
+func (r *subscribeRepo) clearNotifications(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if id == "" || id == "*" {
+		r.notifs = map[string][]map[string]any{}
+		return
+	}
+	delete(r.notifs, id)
+}
+
+func (r *subscribeRepo) clearDispositionNotifications(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if id == "" || id == "*" {
+		r.dispNotifs = map[string][]map[string]any{}
+		return
+	}
+	delete(r.dispNotifs, id)
+}
+
 func (r *subscribeRepo) storeDisposition(sc map[string]any) (string, bool) {
 	id, _ := sc["DispositionID"].(string)
 	if id == "" {
@@ -126,6 +146,7 @@ func (r *subscribeRepo) deleteDisposition(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.disp, id)
+	delete(r.dispNotifs, id)
 }
 
 // registerCascadeRoutes 绑定订阅/通知/布控路由（GA/T 1400.4 第5.4节）。
@@ -288,9 +309,14 @@ func (s *Server) handleNotificationCreate(c echo.Context) error {
 }
 
 // handleNotificationDelete 处理 DELETE /VIID/SubscribeNotifications。
-// GA/T 1400.4 §5.4 SubscribeNotification Delete：清空通知列表（占位实现）。
+// GA/T 1400.4 §5.4 SubscribeNotification Delete：按 subscribeId 清空通知；缺省清空全部。
 func (s *Server) handleNotificationDelete(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK("")})
+	id := c.QueryParam("subscribeId")
+	if id == "" {
+		id = "*"
+	}
+	s.subRepo.clearNotifications(id)
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
 // handleNotificationList 处理 GET /VIID/SubscribeNotifications。
@@ -433,9 +459,14 @@ func (s *Server) handleDispositionNotificationCreate(c echo.Context) error {
 }
 
 // handleDispositionNotificationDelete 处理 DELETE /VIID/DispositionNotifications。
-// GA/T 1400.4 §5.4 DispositionNotification Delete：清空布控通知（占位实现）。
+// GA/T 1400.4 §5.4 DispositionNotification Delete：按 dispositionId 清空通知；缺省清空全部。
 func (s *Server) handleDispositionNotificationDelete(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK("")})
+	id := c.QueryParam("dispositionId")
+	if id == "" {
+		id = "*"
+	}
+	s.subRepo.clearDispositionNotifications(id)
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
 // handleDispositionNotificationList 处理 GET /VIID/DispositionNotifications。

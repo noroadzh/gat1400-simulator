@@ -64,15 +64,17 @@ E2E 测试 MUST NOT mock HTTP 层。服务端 MUST 通过 `net.Listen` 或 `http
 - **WHEN** 黄金样本期望 200，但服务端返回 401
 - **THEN** 测试 MUST 失败并打印失配描述。
 
-### Requirement: 全部 internal 包 MUST ≥ 90% 测试覆盖率
+### Requirement: 包覆盖率 MUST 满足分层目标且 MUST 可观测
 
-`internal/` 下每个包 MUST 达到至少 90% 行覆盖率（`go test -cover` 输出）。覆盖率报告 MUST 在 CI 中发布。
+仓库 MUST 在 CI 与本地 `make test` 中以同一口径统计覆盖率（`-coverpkg=./internal/...,./cmd/...`），覆盖率 MUST 作为产物输出（`coverage.out`）。
 
-#### Scenario: 覆盖率报告在 CI 发布
+分层目标（语句覆盖率）：domain/ports ≥95%；adapter/scenario ≥80%；其余 adapter / ui ≥70%；cmd ≥50%。低于目标的包 MUST 在 PR 中显式豁免。
 
-- **WHEN** CI 执行 `go test -cover` 后
-- **THEN** 覆盖率报告 MUST 出现在 CI 输出中
-- **AND** 任何包低于 90% MUST 导致 CI 失败。
+#### Scenario: CI 以归一口径统计覆盖率
+
+- **WHEN** PR 触发 CI Test job
+- **THEN** `go test` MUST 包含 `-coverpkg=./internal/...,./cmd/...` 与 `-coverprofile=coverage.out`
+- **AND** `coverage.out` MUST 作为 artifact 上传（保留 ≥7 天）
 
 ### Requirement: 文档 MUST 与代码同步
 

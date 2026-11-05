@@ -512,6 +512,46 @@ func newBFFWithProtocol(t *testing.T, baseURL string) *Server {
 	return NewServer(log, nodeSvc, scenSvc, rec, reader, cfg)
 }
 
+func TestSubscriptionsAPI_PassThrough(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/VIID/Subscribes", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"ResponseStatus": map[string]any{"StatusCode": 0, "StatusString": "OK"},
+			"SubscribeList": map[string]any{
+				"SubscribeObject": []any{
+					map[string]any{"SubscribeID": "SUB1", "Title": "t"},
+				},
+			},
+		})
+	})
+	mock := httptest.NewServer(mux)
+	t.Cleanup(mock.Close)
+	srv := newBFFWithProtocol(t, mock.URL)
+
+	rec := do(t, srv, http.MethodGet, "/api/control/subscriptions", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := decode(t, rec.Body)
+	items, _ := body["items"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("items=%v", body)
+	}
+}
+
+func TestConfigAPI(t *testing.T) {
+	srv := newBFFWithProtocol(t, "http://127.0.0.1:14000")
+	rec := do(t, srv, http.MethodGet, "/api/control/config", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d", rec.Code)
+	}
+	body := decode(t, rec.Body)
+	if body["protocolBaseURL"] == nil {
+		t.Fatalf("missing protocolBaseURL: %v", body)
+	}
+}
+
 func TestResourceAPI_ListAllKinds(t *testing.T) {
 	mock := mockProtocolServer(t)
 	t.Cleanup(mock.Close)

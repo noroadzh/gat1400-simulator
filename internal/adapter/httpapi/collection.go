@@ -14,15 +14,24 @@ import (
 // resourceRepo 内存内 key/value 存储，存放各 Kind 的资源实体。
 // HTTP API 读写此处；data-service API 从此查询。
 // 数据结构：Kind -> ResourceID -> 原始 payload map
+// info/data 分别存放 §5.2 Info / Data 子资源，与父对象解耦。
 type resourceRepo struct {
 	mu   sync.RWMutex
 	data map[resource.Kind]map[string]map[string]any
+	info map[resource.Kind]map[string]map[string]any
+	blob map[resource.Kind]map[string]map[string]any
 }
 
 func newResourceRepo() *resourceRepo {
-	r := &resourceRepo{data: map[resource.Kind]map[string]map[string]any{}}
+	r := &resourceRepo{
+		data: map[resource.Kind]map[string]map[string]any{},
+		info: map[resource.Kind]map[string]map[string]any{},
+		blob: map[resource.Kind]map[string]map[string]any{},
+	}
 	for _, k := range resource.AllKinds {
 		r.data[k] = map[string]map[string]any{}
+		r.info[k] = map[string]map[string]any{}
+		r.blob[k] = map[string]map[string]any{}
 	}
 	return r
 }
@@ -48,6 +57,44 @@ func (r *resourceRepo) list(kind resource.Kind) []map[string]any {
 		out = append(out, v)
 	}
 	return out
+}
+
+func (r *resourceRepo) getInfo(kind resource.Kind, id string) (map[string]any, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	v, ok := r.info[kind][id]
+	return v, ok
+}
+
+func (r *resourceRepo) putInfo(kind resource.Kind, id string, payload map[string]any) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.info[kind][id] = payload
+}
+
+func (r *resourceRepo) deleteInfo(kind resource.Kind, id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.info[kind], id)
+}
+
+func (r *resourceRepo) getData(kind resource.Kind, id string) (map[string]any, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	v, ok := r.blob[kind][id]
+	return v, ok
+}
+
+func (r *resourceRepo) putData(kind resource.Kind, id string, payload map[string]any) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.blob[kind][id] = payload
+}
+
+func (r *resourceRepo) deleteData(kind resource.Kind, id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.blob[kind], id)
 }
 
 // registerCollectionRoutes 为每种 Kind 绑定 POST /VIID/<Collection>。
@@ -76,11 +123,14 @@ func (s *Server) registerDataServiceRoutes() {
 		s.e.PUT("/VIID/"+coll+"/:id", s.makeDataPutHandler(kind))
 		s.e.DELETE("/VIID/"+coll+"/:id", s.makeDataDeleteHandler(kind))
 		// Info subresource
-		s.e.GET("/VIID/"+coll+"/:id/Info", s.makeDataInfoHandler(kind))
+		s.e.GET("/VIID/"+coll+"/:id/Info", s.makeInfoGetHandler(kind))
+		s.e.PUT("/VIID/"+coll+"/:id/Info", s.makeInfoPutHandler(kind))
+		s.e.DELETE("/VIID/"+coll+"/:id/Info", s.makeInfoDeleteHandler(kind))
 		// Data subresource
-		s.e.GET("/VIID/"+coll+"/:id/Data", s.makeDataInfoHandler(kind))
-		s.e.POST("/VIID/"+coll+"/:id/Data", s.makeDataInfoHandler(kind))
-		s.e.DELETE("/VIID/"+coll+"/:id/Data", s.makeDataInfoHandler(kind))
+		s.e.GET("/VIID/"+coll+"/:id/Data", s.makeDataGetSubHandler(kind))
+		s.e.POST("/VIID/"+coll+"/:id/Data", s.makeDataPutSubHandler(kind))
+		s.e.PUT("/VIID/"+coll+"/:id/Data", s.makeDataPutSubHandler(kind))
+		s.e.DELETE("/VIID/"+coll+"/:id/Data", s.makeDataDeleteSubHandler(kind))
 	}
 }
 
@@ -181,26 +231,105 @@ func (s *Server) makeDataPutHandler(kind resource.Kind) echo.HandlerFunc {
 func (s *Server) makeDataDeleteHandler(kind resource.Kind) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
-		// Soft delete: the in-memory map simply forgets the entry.
+		// Soft delete: forget parent + Info/Data 子资源。
 		s.repo.mu.Lock()
 		delete(s.repo.data[kind], id)
+		delete(s.repo.info[kind], id)
+		delete(s.repo.blob[kind], id)
 		s.repo.mu.Unlock()
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }
 
-// makeDataInfoHandler 返回 Info/Data 子资源处理器（GET/PUT/DELETE /VIID/<Collection>/:id/Info/Data）。
-// GA/T 1400.4 §5.2 子资源（Info/Data）：占位返回对象本身（生产实现应返回元信息或二进制数据）。
-func (s *Server) makeDataInfoHandler(kind resource.Kind) echo.HandlerFunc {
+// makeInfoGetHandler GET /VIID/<Collection>/:id/Info —— 返回独立 Info；未写入时回退父对象摘要。
+func (s *Server) makeInfoGetHandler(kind resource.Kind) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
-		obj, ok := s.repo.get(kind, id)
-		if !ok {
+		if _, ok := s.repo.get(kind, id); !ok {
 			return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+		}
+		info, ok := s.repo.getInfo(kind, id)
+		if !ok {
+			info = map[string]any{
+				resource.IDOf(kind): id,
+				"Kind":              string(kind),
+				"Source":            "derived",
+			}
 		}
 		return c.JSON(http.StatusOK, map[string]any{
 			"ResponseStatus": response.OK(id),
-			"Info":          obj,
+			"Info":           info,
 		})
+	}
+}
+
+func (s *Server) makeInfoPutHandler(kind resource.Kind) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		if _, ok := s.repo.get(kind, id); !ok {
+			return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+		}
+		var body map[string]any
+		if err := c.Bind(&body); err != nil {
+			return c.JSON(http.StatusBadRequest, response.Error(id, response.CodeInvalid, "invalid body"))
+		}
+		if body == nil {
+			body = map[string]any{}
+		}
+		body[resource.IDOf(kind)] = id
+		s.repo.putInfo(kind, id, body)
+		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
+	}
+}
+
+func (s *Server) makeInfoDeleteHandler(kind resource.Kind) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		s.repo.deleteInfo(kind, id)
+		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
+	}
+}
+
+// makeDataGetSubHandler GET Data 子资源（与父对象分离的二进制/结构化载荷信封）。
+func (s *Server) makeDataGetSubHandler(kind resource.Kind) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		if _, ok := s.repo.get(kind, id); !ok {
+			return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+		}
+		data, ok := s.repo.getData(kind, id)
+		if !ok {
+			data = map[string]any{}
+		}
+		return c.JSON(http.StatusOK, map[string]any{
+			"ResponseStatus": response.OK(id),
+			"Data":           data,
+		})
+	}
+}
+
+func (s *Server) makeDataPutSubHandler(kind resource.Kind) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		if _, ok := s.repo.get(kind, id); !ok {
+			return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+		}
+		var body map[string]any
+		if err := c.Bind(&body); err != nil {
+			return c.JSON(http.StatusBadRequest, response.Error(id, response.CodeInvalid, "invalid body"))
+		}
+		if body == nil {
+			body = map[string]any{}
+		}
+		s.repo.putData(kind, id, body)
+		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
+	}
+}
+
+func (s *Server) makeDataDeleteSubHandler(kind resource.Kind) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		s.repo.deleteData(kind, id)
+		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }

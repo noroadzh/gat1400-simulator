@@ -210,12 +210,12 @@ internal/domain/   ──→ 仅依赖标准库
 
 ## 八、可扩展模块
 
-下列模块已存在但暂未启用，可在后续 change 中扩展：
+已启用的扩展模块（最小可用，可继续加深）：
 
 | 模块 | 用途 |
 |------|------|
-| `internal/adapter/generator/` | 资源生成器（人脸、车辆图片） |
-| `internal/adapter/media/` | 媒体流（视频抽帧、HLS、RTSP） |
+| `internal/adapter/generator/` | 伪造 Person/Face/Vehicle 等资源对象（可选嵌入占位图） |
+| `internal/adapter/media/` | 内存媒体 Store + JPEG 占位图；场景 Face 工厂已嵌入 base64 |
 
 ---
 

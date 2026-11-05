@@ -48,7 +48,7 @@ func TestDailyWriter_RotateIsSerialized(t *testing.T) {
 	path := filepath.Join(dir, "daily_serialize.log")
 
 	rot := newLumberjackForTest(path)
-	d := newDailyWriter(rot)
+	d := newDailyWriter(rot, slog.Default())
 	// 测试环境额外清理：dailyWriter.stop() 只关后台 goroutine，不代理底层
 	// lumberjack 的文件句柄。Windows 对已打开文件默认独占，TempDir cleanup
 	// 会报 "The process cannot access the file because it is being used by

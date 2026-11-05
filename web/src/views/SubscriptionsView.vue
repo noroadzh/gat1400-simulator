@@ -1,24 +1,30 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { controlApi } from '@/api/control'
 import { controlWs } from '@/api/ws'
 
-interface Subscription {
-  subscribeID: string
-  title?: string
-  subscribeType?: string
-  resource?: { uri?: string; path?: string }
-  target?: { device?: string; group?: string }
-  status?: string
-}
-
-const subscribes = ref<Subscription[]>([])
+const subscribes = ref<unknown[]>([])
 const dispositions = ref<unknown[]>([])
+const error = ref('')
+const loading = ref(false)
 
-// 后端尚未实现 /api/control/subscriptions（见 openspec 待交付 change）。
-// 这里不发起请求，避免每条 WS 事件都触发一次 404；待接口落地后再接 controlApi。
 async function load() {
-  subscribes.value = []
-  dispositions.value = []
+  loading.value = true
+  error.value = ''
+  try {
+    const [subs, disps] = await Promise.all([
+      controlApi.getSubscriptions(),
+      controlApi.getDispositions(),
+    ])
+    subscribes.value = Array.isArray(subs.items) ? subs.items : []
+    dispositions.value = Array.isArray(disps.items) ? disps.items : []
+  } catch (e) {
+    error.value = (e as Error).message
+    subscribes.value = []
+    dispositions.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 const subsJson = ref<string>('loading...')
@@ -30,10 +36,11 @@ async function refreshJson() {
   dispJson.value = JSON.stringify(dispositions.value, null, 2)
 }
 
-// 订阅 controlWs.on 返回的解绑函数，避免组件卸载后仍被 WS 事件触发
 let offWs: (() => void) | null = null
 onMounted(() => {
-  offWs = controlWs.on(refreshJson)
+  offWs = controlWs.on(() => {
+    void refreshJson()
+  })
   void refreshJson()
 })
 onUnmounted(() => {
@@ -47,8 +54,12 @@ onUnmounted(() => {
     <div class="glass-card">
       <div class="panel-header">
         <span class="panel-title">Subscribes</span>
-        <span class="panel-count">{{ subscribes.length }}</span>
+        <div class="panel-actions">
+          <span class="panel-count">{{ subscribes.length }}</span>
+          <el-button size="small" :loading="loading" @click="refreshJson">Refresh</el-button>
+        </div>
       </div>
+      <p v-if="error" class="err">{{ error }}</p>
       <pre class="json-display">{{ subsJson }}</pre>
     </div>
 
@@ -58,17 +69,6 @@ onUnmounted(() => {
         <span class="panel-count">{{ dispositions.length }}</span>
       </div>
       <pre class="json-display">{{ dispJson }}</pre>
-    </div>
-
-    <div class="coming-soon glass-card">
-      <p class="coming-soon-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" fill="currentColor"/>
-        </svg>
-      </p>
-      <p class="coming-soon-text">Subscriptions / Dispositions 路由</p>
-      <p class="coming-soon-sub">后端尚未实现 <code>/api/control/subscriptions</code> 接口</p>
-      <p class="coming-soon-sub">计划在 #15 scenario-engine 中交付</p>
     </div>
   </div>
 </template>
@@ -92,6 +92,12 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--card-border);
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .panel-title {
@@ -120,38 +126,9 @@ onUnmounted(() => {
   overflow-y: auto;
 }
 
-.coming-soon {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 28px 16px;
-  text-align: center;
-}
-
-.coming-soon-icon {
-  margin: 0 0 4px;
-  color: var(--primary);
-  opacity: 0.55;
-}
-
-.coming-soon-text {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.coming-soon-sub {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.coming-soon-sub code {
-  font-family: 'Courier New', monospace;
-  color: var(--primary);
+.err {
+  margin: 8px 16px 0;
+  color: #f56c6c;
+  font-size: 12px;
 }
 </style>

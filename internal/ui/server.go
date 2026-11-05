@@ -128,6 +128,9 @@ func (s *Server) installRoutes() {
 	api.GET("/stats", s.handleStats)
 
 	s.installResourceRoutes(api)
+	s.installSubscriptionRoutes(api)
+
+	api.GET("/config", s.handleConfig)
 
 	ws := s.e.Group("/ws")
 	ws.GET("/events", s.handleEvents)
@@ -140,6 +143,20 @@ func (s *Server) handleHealth(c echo.Context) error {
 		"status":   "OK",
 		"service":  "gat1400-simulator",
 		"revision": "0.1.0",
+	})
+}
+
+// handleConfig 返回控制面只读运行时摘要（不含密码明文）。
+func (s *Server) handleConfig(c echo.Context) error {
+	base := ""
+	if s.protocolClient != nil {
+		base = s.protocolClient.baseURL
+	}
+	return c.JSON(http.StatusOK, map[string]any{
+		"service":          "gat1400-simulator",
+		"revision":         "0.1.0",
+		"protocolBaseURL":  base,
+		"runningScenarios": s.scenarioSvc.Running(),
 	})
 }
 

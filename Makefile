@@ -35,7 +35,7 @@ $(BINDIR)/$(notdir $(CMD)):
 	$(GO) build -ldflags '$(LDFLAGS)' -o $@ $(CMD)
 
 test:
-	$(GO) test -race -count=1 $(PKG)
+	$(GO) test -race -count=1 -coverpkg=./internal/...,./cmd/... -coverprofile=coverage.out $(PKG)
 
 e2e:
 	$(GO) test -tags=e2e -race -count=1 ./test/e2e/...
