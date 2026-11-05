@@ -59,6 +59,30 @@ func (r *resourceRepo) list(kind resource.Kind) []map[string]any {
 	return out
 }
 
+func (r *resourceRepo) delete(kind resource.Kind, id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.data[kind][id]; !ok {
+		delete(r.info[kind], id)
+		delete(r.blob[kind], id)
+		return false
+	}
+	delete(r.data[kind], id)
+	delete(r.info[kind], id)
+	delete(r.blob[kind], id)
+	return true
+}
+
+func (r *resourceRepo) deleteMany(kind resource.Kind, ids []string) int {
+	n := 0
+	for _, id := range ids {
+		if r.delete(kind, id) {
+			n++
+		}
+	}
+	return n
+}
+
 func (r *resourceRepo) getInfo(kind resource.Kind, id string) (map[string]any, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -97,7 +121,7 @@ func (r *resourceRepo) deleteData(kind resource.Kind, id string) {
 	delete(r.blob[kind], id)
 }
 
-// registerCollectionRoutes 为每种 Kind 绑定 POST /VIID/<Collection>。
+// registerCollectionRoutes 为每种 Kind 绑定集合级 POST/PUT/DELETE /VIID/<Collection>。
 // 无 URI 映射的 Kind（kind.CollectionOf() 返回空）被跳过。
 func (s *Server) registerCollectionRoutes() {
 	for _, kind := range resource.AllKinds {
@@ -106,6 +130,8 @@ func (s *Server) registerCollectionRoutes() {
 			continue
 		}
 		s.e.POST("/VIID/"+coll, s.makeCollectionHandler(kind))
+		s.e.PUT("/VIID/"+coll, s.makeCollectionPutHandler(kind))
+		s.e.DELETE("/VIID/"+coll, s.makeCollectionDeleteHandler(kind))
 	}
 }
 
@@ -166,6 +192,7 @@ func (s *Server) makeCollectionHandler(kind resource.Kind) echo.HandlerFunc {
 				continue
 			}
 			s.repo.store(kind, id, obj)
+			s.persistResource(kind, id, obj)
 			stored = append(stored, id)
 		}
 		// Notify any in-process subscribers. For now we only echo the resource
@@ -182,16 +209,51 @@ func (s *Server) makeCollectionHandler(kind resource.Kind) echo.HandlerFunc {
 	}
 }
 
+// makeCollectionPutHandler 集合级更新（PUT /VIID/<Collection>）：信封与 POST 相同，按 ID upsert。
+func (s *Server) makeCollectionPutHandler(kind resource.Kind) echo.HandlerFunc {
+	return s.makeCollectionHandler(kind)
+}
+
+// makeCollectionDeleteHandler 集合级删除（DELETE /VIID/<Collection>）。
+// 优先 query：PersonID / PersonIDList / IDList；其次 body：*IDList / DeleteOperate。
+func (s *Server) makeCollectionDeleteHandler(kind resource.Kind) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ids := collectIDsFromQuery(c, kind)
+		if len(ids) == 0 {
+			var body map[string]any
+			_ = c.Bind(&body)
+			ids = collectIDsFromBody(body, kind)
+		}
+		if len(ids) == 0 {
+			return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "missing id list"))
+		}
+		n := 0
+		for _, id := range ids {
+			if s.repo.delete(kind, id) {
+				s.persistResourceDelete(kind, id)
+				n++
+			}
+		}
+		return c.JSON(http.StatusOK, map[string]any{
+			"ResponseStatus": response.OK(""),
+			"ItemCount":      n,
+		})
+	}
+}
+
 // makeDataListHandler 返回列表处理器（GET /VIID/<Collection>）。
-// GA/T 1400.4 §5.2 列表查询：响应为 <Kind>List 包裹 <Kind>Object 数组。
+// 支持 PageRecordNum / RecordStartNo 分页与同名字段精确过滤；响应含 TotalNum。
 func (s *Server) makeDataListHandler(kind resource.Kind) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		items := s.repo.list(kind)
+		items := filterObjects(c, s.repo.list(kind))
+		start, pageSize := parsePage(c)
+		page, total := paginate(items, start, pageSize)
 		listKey := string(kind) + "List"
 		objKey := string(kind) + "Object"
 		return c.JSON(http.StatusOK, map[string]any{
 			"ResponseStatus": response.OK(""),
-			listKey:          map[string]any{objKey: items},
+			"TotalNum":       total,
+			listKey:          map[string]any{objKey: page},
 		})
 	}
 }
@@ -222,21 +284,17 @@ func (s *Server) makeDataPutHandler(kind resource.Kind) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, response.Error(id, response.CodeInvalid, "invalid body"))
 		}
 		s.repo.store(kind, id, raw)
+		s.persistResource(kind, id, raw)
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }
 
 // makeDataDeleteHandler 返回软删除处理器（DELETE /VIID/<Collection>/:id）。
-// GA/T 1400.4 §5.2 单条删除：直接从内存 map 中删除 key（软删除）。
 func (s *Server) makeDataDeleteHandler(kind resource.Kind) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
-		// Soft delete: forget parent + Info/Data 子资源。
-		s.repo.mu.Lock()
-		delete(s.repo.data[kind], id)
-		delete(s.repo.info[kind], id)
-		delete(s.repo.blob[kind], id)
-		s.repo.mu.Unlock()
+		s.repo.delete(kind, id)
+		s.persistResourceDelete(kind, id)
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }
@@ -278,6 +336,7 @@ func (s *Server) makeInfoPutHandler(kind resource.Kind) echo.HandlerFunc {
 		}
 		body[resource.IDOf(kind)] = id
 		s.repo.putInfo(kind, id, body)
+		s.persistInfo(kind, id, body)
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }
@@ -286,6 +345,7 @@ func (s *Server) makeInfoDeleteHandler(kind resource.Kind) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
 		s.repo.deleteInfo(kind, id)
+		s.persistInfoDelete(kind, id)
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }
@@ -322,6 +382,7 @@ func (s *Server) makeDataPutSubHandler(kind resource.Kind) echo.HandlerFunc {
 			body = map[string]any{}
 		}
 		s.repo.putData(kind, id, body)
+		s.persistData(kind, id, body)
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }
@@ -330,6 +391,7 @@ func (s *Server) makeDataDeleteSubHandler(kind resource.Kind) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
 		s.repo.deleteData(kind, id)
+		s.persistDataDelete(kind, id)
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 	}
 }

@@ -96,6 +96,7 @@ func newProtocolClient(baseURL string, log *slog.Logger) *protocolClient {
 //	PUT    /api/control/resources/:kind/list/:id        — 单条更新
 //	DELETE /api/control/resources/:kind/list/:id        — 单条删除
 //	GET    /api/control/resources/:kind/list/:id/info   — Info 子资源
+//	GET/POST/PUT/DELETE .../list/:id/data               — Data 子资源
 func (s *Server) installResourceRoutes(api *echo.Group) {
 	api.GET("/resources", s.handleResourceKinds)
 	api.GET("/resources/:kind/list", s.handleResourceProxy)
@@ -104,6 +105,10 @@ func (s *Server) installResourceRoutes(api *echo.Group) {
 	api.PUT("/resources/:kind/list/:id", s.handleResourceProxy)
 	api.DELETE("/resources/:kind/list/:id", s.handleResourceProxy)
 	api.GET("/resources/:kind/list/:id/info", s.handleResourceProxy)
+	api.GET("/resources/:kind/list/:id/data", s.handleResourceProxy)
+	api.POST("/resources/:kind/list/:id/data", s.handleResourceProxy)
+	api.PUT("/resources/:kind/list/:id/data", s.handleResourceProxy)
+	api.DELETE("/resources/:kind/list/:id/data", s.handleResourceProxy)
 }
 
 // resolveKind 把 :kind 路径段解析为合法 Kind；非法返回错误。
@@ -243,9 +248,11 @@ func (s *Server) handleResourceProxy(c echo.Context) error {
 	upstreamPath := "/VIID/" + coll
 	if id := c.Param("id"); id != "" {
 		upstreamPath += "/" + id
-		// Echo 不把 /info 当作 :param，但当前路由 URL 末尾 /info 时把它转给协议端 Info 子资源。
-		if strings.HasSuffix(c.Request().URL.Path, "/info") {
+		pathLower := strings.ToLower(c.Request().URL.Path)
+		if strings.HasSuffix(pathLower, "/info") {
 			upstreamPath += "/Info"
+		} else if strings.HasSuffix(pathLower, "/data") {
+			upstreamPath += "/Data"
 		}
 	}
 

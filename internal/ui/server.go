@@ -129,6 +129,7 @@ func (s *Server) installRoutes() {
 
 	s.installResourceRoutes(api)
 	s.installSubscriptionRoutes(api)
+	s.installProtocolExtraRoutes(api)
 
 	api.GET("/config", s.handleConfig)
 

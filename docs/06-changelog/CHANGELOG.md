@@ -6,6 +6,12 @@
 
 ## [未发布]
 
+### feat(protocol,bff,web) — P1→P3：集合操作/分页/持久化与控制面补齐
+
+- P1：集合级 `PUT/DELETE /VIID/<Collection>`；列表 `PageRecordNum`/`RecordStartNo` + 字段过滤 + `TotalNum`；Catalog 单条 GET；SQLite `viid_object` 持久化资源/Catalog/Cascade/VIIDServers/VIAS
+- P2：BFF 透传 Catalog / VIIDServers / VIAS / Cascade 写 / Data 子资源；订阅页可写 + 通知；新增 Catalog/VIAS 页
+- P3：新增 `face-flow` 场景；协议文档与本变更日志同步
+
 ### chore(docs) — 文档按阶段分目录
 
 - `docs/` 按阶段建目录：`01-architecture` … `06-changelog`、`07-standards`

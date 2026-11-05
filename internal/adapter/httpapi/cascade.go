@@ -271,6 +271,7 @@ func (s *Server) handleSubscribeCreate(c echo.Context) error {
 	if ids, ok := extractDeleteIDs(body, "SubscribeIDList"); ok {
 		for _, id := range ids {
 			s.subRepo.delete(id)
+			s.persistSubscribeDelete(id)
 		}
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK("")})
 	}
@@ -284,6 +285,7 @@ func (s *Server) handleSubscribeCreate(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, response.Error("", response.CodeFailure, "internal error"))
 		}
 	}
+	s.persistSubscribe(id, body)
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus": response.OK(id),
 		"SubscribeID":    id,
@@ -302,6 +304,7 @@ func (s *Server) handleSubscribeUpdate(c echo.Context) error {
 	s.subRepo.mu.Lock()
 	s.subRepo.subs[id] = body
 	s.subRepo.mu.Unlock()
+	s.persistSubscribe(id, body)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -311,6 +314,7 @@ func (s *Server) handleSubscribeUpdate(c echo.Context) error {
 func (s *Server) handleSubscribeDelete(c echo.Context) error {
 	id := c.Param("id")
 	s.subRepo.delete(id)
+	s.persistSubscribeDelete(id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -324,7 +328,9 @@ func (s *Server) handleSubscribeBulk(c echo.Context) error {
 	if arr, ok := body["SubscribeObject"].([]any); ok {
 		for _, item := range arr {
 			if m, ok := item.(map[string]any); ok {
-				s.subRepo.store(m)
+				if id, ok := s.subRepo.store(m); ok {
+					s.persistSubscribe(id, m)
+				}
 			}
 		}
 	}
@@ -342,6 +348,7 @@ func (s *Server) handleSubscribeBulkDelete(c echo.Context) error {
 		for _, item := range arr {
 			if id, ok := item.(string); ok {
 				s.subRepo.delete(id)
+				s.persistSubscribeDelete(id)
 			}
 		}
 	}
@@ -426,6 +433,7 @@ func (s *Server) handleDispositionCreate(c echo.Context) error {
 	if ids, ok := extractDeleteIDs(body, "DispositionIDList"); ok {
 		for _, id := range ids {
 			s.subRepo.deleteDisposition(id)
+			s.persistDispositionDelete(id)
 		}
 		return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK("")})
 	}
@@ -438,6 +446,7 @@ func (s *Server) handleDispositionCreate(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, response.Error("", response.CodeFailure, "internal error"))
 		}
 	}
+	s.persistDisposition(id, body)
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus": response.OK(id),
 		"DispositionID":  id,
@@ -456,6 +465,7 @@ func (s *Server) handleDispositionUpdate(c echo.Context) error {
 	s.subRepo.mu.Lock()
 	s.subRepo.disp[id] = body
 	s.subRepo.mu.Unlock()
+	s.persistDisposition(id, body)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -464,6 +474,7 @@ func (s *Server) handleDispositionUpdate(c echo.Context) error {
 func (s *Server) handleDispositionDelete(c echo.Context) error {
 	id := c.Param("id")
 	s.subRepo.deleteDisposition(id)
+	s.persistDispositionDelete(id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -477,7 +488,9 @@ func (s *Server) handleDispositionBulk(c echo.Context) error {
 	if arr, ok := body["DispositionObject"].([]any); ok {
 		for _, item := range arr {
 			if m, ok := item.(map[string]any); ok {
-				s.subRepo.storeDisposition(m)
+				if id, ok := s.subRepo.storeDisposition(m); ok {
+					s.persistDisposition(id, m)
+				}
 			}
 		}
 	}
@@ -495,6 +508,7 @@ func (s *Server) handleDispositionBulkDelete(c echo.Context) error {
 		for _, item := range arr {
 			if id, ok := item.(string); ok {
 				s.subRepo.deleteDisposition(id)
+				s.persistDispositionDelete(id)
 			}
 		}
 	}

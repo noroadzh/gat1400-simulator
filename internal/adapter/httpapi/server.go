@@ -36,6 +36,7 @@ type Server struct {
 	catalog     *catalogRepo
 	servers     *viidServerRepo
 	vias        *viasRepo
+	objects     *storage.ObjectStore // 可选：业务对象 SQLite 持久化
 	srv         *http.Server
 }
 

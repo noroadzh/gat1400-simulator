@@ -666,6 +666,102 @@ func TestDispositionNotification_GetAndDeleteByID(t *testing.T) {
 	}
 }
 
+func TestCollection_BulkPutDeleteAndPagination(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	post := mustJSONRequest(t, http.MethodPost, "/VIID/Persons", map[string]any{
+		"PersonList": map[string]any{
+			"PersonObject": []any{
+				map[string]any{"PersonID": "P1", "Name": "a"},
+				map[string]any{"PersonID": "P2", "Name": "b"},
+				map[string]any{"PersonID": "P3", "Name": "a"},
+			},
+		},
+	})
+	if rec := doRequest(srv, post); rec.Code != http.StatusOK {
+		t.Fatalf("post = %d", rec.Code)
+	}
+
+	put := mustJSONRequest(t, http.MethodPut, "/VIID/Persons", map[string]any{
+		"PersonList": map[string]any{
+			"PersonObject": []any{map[string]any{"PersonID": "P2", "Name": "b2"}},
+		},
+	})
+	if rec := doRequest(srv, put); rec.Code != http.StatusOK {
+		t.Fatalf("put = %d", rec.Code)
+	}
+
+	list := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/Persons?Name=a&PageRecordNum=1&RecordStartNo=1", nil))
+	if list.Code != http.StatusOK {
+		t.Fatalf("list = %d", list.Code)
+	}
+	body := decodeResponse(t, list.Body)
+	if body["TotalNum"].(float64) != 2 {
+		t.Fatalf("TotalNum = %v want 2", body["TotalNum"])
+	}
+	pl := body["PersonList"].(map[string]any)
+	objs := pl["PersonObject"].([]any)
+	if len(objs) != 1 {
+		t.Fatalf("page len = %d want 1", len(objs))
+	}
+
+	del := httptest.NewRequest(http.MethodDelete, "/VIID/Persons?PersonID=P1,P3", nil)
+	if rec := doRequest(srv, del); rec.Code != http.StatusOK {
+		t.Fatalf("delete = %d", rec.Code)
+	}
+	left := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/Persons", nil))
+	leftBody := decodeResponse(t, left.Body)
+	if leftBody["TotalNum"].(float64) != 1 {
+		t.Fatalf("after delete TotalNum = %v", leftBody["TotalNum"])
+	}
+}
+
+func TestCatalog_GetByID(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	rec := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/APEs/41000000005030312222", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get ape = %d", rec.Code)
+	}
+	miss := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/APEs/no-such", nil))
+	if miss.Code != http.StatusNotFound {
+		t.Fatalf("miss = %d want 404", miss.Code)
+	}
+}
+
+func TestObjectStore_PersistPerson(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "obj.db")
+	store, err := storage.NewObjectStore(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("NewObjectStore: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	srv, _, _ := newTestServer(t)
+	srv.AttachObjectStore(store, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	post := mustJSONRequest(t, http.MethodPost, "/VIID/Persons", map[string]any{
+		"PersonList": map[string]any{
+			"PersonObject": []any{map[string]any{"PersonID": "PX", "Name": "persist"}},
+		},
+	})
+	if rec := doRequest(srv, post); rec.Code != http.StatusOK {
+		t.Fatalf("post = %d", rec.Code)
+	}
+
+	srv2, _, _ := newTestServer(t)
+	store2, err := storage.NewObjectStore(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	defer func() { _ = store2.Close() }()
+	srv2.AttachObjectStore(store2, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	get := doRequest(srv2, httptest.NewRequest(http.MethodGet, "/VIID/Persons/PX", nil))
+	if get.Code != http.StatusOK {
+		t.Fatalf("reload get = %d body=%s", get.Code, get.Body.String())
+	}
+}
+
 func TestVIAS_TasksAndControls(t *testing.T) {
 	srv, _, _ := newTestServer(t)
 

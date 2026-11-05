@@ -101,24 +101,35 @@ func (r *catalogRepo) deleteOne(bucket map[string]map[string]any, id string) boo
 	return true
 }
 
+func (r *catalogRepo) getOne(bucket map[string]map[string]any, id string) (map[string]any, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	v, ok := bucket[id]
+	return v, ok
+}
+
 // registerCatalogRoutes 绑定目录路由（/VIID/APEs /APSs /Tollgates /Lanes）。
-// GA/T 1400.4 §5.5 Catalog：支持列表、批量写入、按 ID 删除。
+// GA/T 1400.4 §5.5 Catalog：支持列表、单条 GET、批量写入、按 ID 删除。
 func (s *Server) registerCatalogRoutes() {
 	s.e.GET("/VIID/APEs", s.handleAPEs)
 	s.e.POST("/VIID/APEs", s.handleAPEsUpsert)
 	s.e.PUT("/VIID/APEs", s.handleAPEsUpsert)
+	s.e.GET("/VIID/APEs/:id", s.handleAPEGet)
 	s.e.DELETE("/VIID/APEs/:id", s.handleAPEDelete)
 
 	s.e.GET("/VIID/APSs", s.handleAPSs)
 	s.e.POST("/VIID/APSs", s.handleAPSsUpsert)
+	s.e.GET("/VIID/APSs/:id", s.handleAPSGet)
 	s.e.DELETE("/VIID/APSs/:id", s.handleAPSDelete)
 
 	s.e.GET("/VIID/Tollgates", s.handleTollgates)
 	s.e.POST("/VIID/Tollgates", s.handleTollgatesUpsert)
+	s.e.GET("/VIID/Tollgates/:id", s.handleTollgateGet)
 	s.e.DELETE("/VIID/Tollgates/:id", s.handleTollgateDelete)
 
 	s.e.GET("/VIID/Lanes", s.handleLanes)
 	s.e.POST("/VIID/Lanes", s.handleLanesUpsert)
+	s.e.GET("/VIID/Lanes/:id", s.handleLaneGet)
 	s.e.DELETE("/VIID/Lanes/:id", s.handleLaneDelete)
 }
 
@@ -170,7 +181,9 @@ func (s *Server) handleAPEsUpsert(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
 	}
-	n := s.catalog.upsertMany(s.catalog.apes, "APEID", extractCatalogObjects(body, "APEList", "APEObject"))
+	objs := extractCatalogObjects(body, "APEList", "APEObject")
+	n := s.catalog.upsertMany(s.catalog.apes, "APEID", objs)
+	s.persistCatalogUpsert("catalog:APE", "APEID", objs)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(""), "ItemCount": n})
 }
 
@@ -179,7 +192,9 @@ func (s *Server) handleAPSsUpsert(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
 	}
-	n := s.catalog.upsertMany(s.catalog.apss, "APSID", extractCatalogObjects(body, "APSList", "APSObject"))
+	objs := extractCatalogObjects(body, "APSList", "APSObject")
+	n := s.catalog.upsertMany(s.catalog.apss, "APSID", objs)
+	s.persistCatalogUpsert("catalog:APS", "APSID", objs)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(""), "ItemCount": n})
 }
 
@@ -188,7 +203,9 @@ func (s *Server) handleTollgatesUpsert(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
 	}
-	n := s.catalog.upsertMany(s.catalog.tollgates, "TollgateID", extractCatalogObjects(body, "TollgateList", "TollgateObject"))
+	objs := extractCatalogObjects(body, "TollgateList", "TollgateObject")
+	n := s.catalog.upsertMany(s.catalog.tollgates, "TollgateID", objs)
+	s.persistCatalogUpsert("catalog:Tollgate", "TollgateID", objs)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(""), "ItemCount": n})
 }
 
@@ -197,8 +214,46 @@ func (s *Server) handleLanesUpsert(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
 	}
-	n := s.catalog.upsertMany(s.catalog.lanes, "LaneID", extractCatalogObjects(body, "LaneList", "LaneObject"))
+	objs := extractCatalogObjects(body, "LaneList", "LaneObject")
+	n := s.catalog.upsertMany(s.catalog.lanes, "LaneID", objs)
+	s.persistCatalogUpsert("catalog:Lane", "LaneID", objs)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(""), "ItemCount": n})
+}
+
+func (s *Server) handleAPEGet(c echo.Context) error {
+	id := c.Param("id")
+	obj, ok := s.catalog.getOne(s.catalog.apes, id)
+	if !ok {
+		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id), "APE": obj})
+}
+
+func (s *Server) handleAPSGet(c echo.Context) error {
+	id := c.Param("id")
+	obj, ok := s.catalog.getOne(s.catalog.apss, id)
+	if !ok {
+		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id), "APS": obj})
+}
+
+func (s *Server) handleTollgateGet(c echo.Context) error {
+	id := c.Param("id")
+	obj, ok := s.catalog.getOne(s.catalog.tollgates, id)
+	if !ok {
+		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id), "Tollgate": obj})
+}
+
+func (s *Server) handleLaneGet(c echo.Context) error {
+	id := c.Param("id")
+	obj, ok := s.catalog.getOne(s.catalog.lanes, id)
+	if !ok {
+		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id), "Lane": obj})
 }
 
 func (s *Server) handleAPEDelete(c echo.Context) error {
@@ -206,6 +261,7 @@ func (s *Server) handleAPEDelete(c echo.Context) error {
 	if !s.catalog.deleteOne(s.catalog.apes, id) {
 		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
 	}
+	s.persistCatalogDelete("catalog:APE", id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -214,6 +270,7 @@ func (s *Server) handleAPSDelete(c echo.Context) error {
 	if !s.catalog.deleteOne(s.catalog.apss, id) {
 		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
 	}
+	s.persistCatalogDelete("catalog:APS", id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -222,6 +279,7 @@ func (s *Server) handleTollgateDelete(c echo.Context) error {
 	if !s.catalog.deleteOne(s.catalog.tollgates, id) {
 		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
 	}
+	s.persistCatalogDelete("catalog:Tollgate", id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -230,5 +288,6 @@ func (s *Server) handleLaneDelete(c echo.Context) error {
 	if !s.catalog.deleteOne(s.catalog.lanes, id) {
 		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
 	}
+	s.persistCatalogDelete("catalog:Lane", id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }

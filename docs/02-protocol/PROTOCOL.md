@@ -174,10 +174,12 @@ User-Identify: <device-id>
 | 方法 | 路径 | 含义 |
 |------|------|------|
 | POST | `/VIID/<Collection>` | 批量写入（标准信封） |
-| GET | `/VIID/<Collection>` | 列表查询 |
+| PUT | `/VIID/<Collection>` | 集合级批量更新（信封同 POST） |
+| DELETE | `/VIID/<Collection>` | 集合级删除（query：`<Kind>ID`/`IDList`，或 body：`*IDList`） |
+| GET | `/VIID/<Collection>` | 列表查询（`PageRecordNum`/`RecordStartNo` 分页 + 字段精确过滤；响应含 `TotalNum`） |
 | GET | `/VIID/<Collection>/<id>` | 单条查询 |
 | PUT | `/VIID/<Collection>/<id>` | 单条更新 |
-| DELETE | `/VIID/<Collection>/<id>` | 单条删除（软删除：从内存 map 移除） |
+| DELETE | `/VIID/<Collection>/<id>` | 单条删除 |
 | GET | `/VIID/<Collection>/<id>/Info` | Info 子资源（当前占位：返回父对象） |
 | GET | `/VIID/<Collection>/<id>/Data` | Data 子资源（同上占位） |
 | POST | `/VIID/<Collection>/<id>/Data` | Data 子资源写入（同上占位） |
@@ -352,16 +354,22 @@ Info 与 Data 与父对象**分表存储**：
 |------|------|------|
 | GET | `/VIID/APEs` | 卡口实体（Access Point Entity） |
 | POST/PUT | `/VIID/APEs` | 批量 upsert（`APEList.APEObject[]`） |
+| GET | `/VIID/APEs/:id` | 单条查询 |
 | DELETE | `/VIID/APEs/:id` | 按 APEID 删除 |
 | GET | `/VIID/APSs` | 应用平台 |
 | POST | `/VIID/APSs` | 批量 upsert |
+| GET | `/VIID/APSs/:id` | 单条查询 |
 | DELETE | `/VIID/APSs/:id` | 按 APSID 删除 |
 | GET | `/VIID/Tollgates` | 收费站 / 卡口 |
 | POST | `/VIID/Tollgates` | 批量 upsert |
+| GET | `/VIID/Tollgates/:id` | 单条查询 |
 | DELETE | `/VIID/Tollgates/:id` | 按 TollgateID 删除 |
 | GET | `/VIID/Lanes` | 车道 |
 | POST | `/VIID/Lanes` | 批量 upsert |
+| GET | `/VIID/Lanes/:id` | 单条查询 |
 | DELETE | `/VIID/Lanes/:id` | 按 LaneID 删除 |
+
+> 持久化：主协议进程将资源 / Catalog / Cascade / VIIDServers / VIAS 任务与规则写入与抓包共用的 SQLite（`viid_object` 表）；进程重启后自动加载。
 
 响应示例：
 

@@ -10,19 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// installSubscriptionRoutes 注册订阅 / 布控控制面端点，透传协议端 Cascade 路由。
-//
-//	GET /api/control/subscriptions              → GET /VIID/Subscribes
-//	GET /api/control/dispositions               → GET /VIID/Dispositions
-//	GET /api/control/subscribe-notifications    → GET /VIID/SubscribeNotifications
-//	GET /api/control/disposition-notifications  → GET /VIID/DispositionNotifications
-func (s *Server) installSubscriptionRoutes(api *echo.Group) {
-	api.GET("/subscriptions", s.handleProxyVIID("/VIID/Subscribes"))
-	api.GET("/dispositions", s.handleProxyVIID("/VIID/Dispositions"))
-	api.GET("/subscribe-notifications", s.handleProxyVIID("/VIID/SubscribeNotifications"))
-	api.GET("/disposition-notifications", s.handleProxyVIID("/VIID/DispositionNotifications"))
-}
-
+// handleProxyVIID GET 透传 Cascade 列表，并规范化为 { items: [...] }。
 func (s *Server) handleProxyVIID(upstreamPath string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		start := time.Now()
@@ -54,7 +42,6 @@ func (s *Server) handleProxyVIID(upstreamPath string) echo.HandlerFunc {
 			return c.JSON(http.StatusBadGateway, map[string]any{"error": err.Error()})
 		}
 
-		// 规范化为控制面友好结构：{ items: [...] }
 		var raw map[string]any
 		if err := json.Unmarshal(body, &raw); err != nil {
 			c.Response().WriteHeader(resp.StatusCode)

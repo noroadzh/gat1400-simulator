@@ -11,6 +11,7 @@ const navItems = [
   { path: '/scenarios', label: 'Scenarios', icon: 'VideoCamera' },
   { path: '/resources', label: 'Resources', icon: 'Files' },
   { path: '/subscriptions', label: 'Subscriptions', icon: 'Bell' },
+  { path: '/protocol-extra', label: 'Catalog / VIAS', icon: 'Collection' },
   { path: '/captures', label: 'Captures', icon: 'FolderOpened' },
   { path: '/config', label: 'Config', icon: 'Setting' }
 ]

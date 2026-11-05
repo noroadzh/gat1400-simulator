@@ -218,6 +218,12 @@ func run(profile string) (ready bool, err error) {
 	}
 
 	apiServer := httpapi.NewServer(rootLogger, nodeSvc, scenarioSvc, recorder, nonceStore, idGen, httpapiConfig(cfg))
+	if objStore, err := storage.NewObjectStore(rootCtx, cfg.Storage.Path); err != nil {
+		return true, fmt.Errorf("open object store: %w", err)
+	} else {
+		defer func() { _ = objStore.Close() }()
+		apiServer.AttachObjectStore(objStore, rootLogger)
+	}
 	nodeRegistry = httpapi.NewNodeRegistry(rootLogger, nodeSvc, scenarioSvc, recorder, nonceStore, idGen, httpapiConfig(cfg))
 	bffServer := ui.NewServer(rootLogger, nodeSvc, scenarioSvc, recorder, captureReader, uiConfig(cfg))
 

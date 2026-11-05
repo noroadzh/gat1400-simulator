@@ -159,11 +159,32 @@ export const controlApi = {
   // Config
   getConfig: () => request<Record<string, unknown>>('/config'),
 
-  // Cascade 控制面（透传协议端 Subscribes / Dispositions）
+  // Cascade 控制面
   getSubscriptions: () =>
     request<{ items: unknown[]; ResponseStatus?: unknown }>('/subscriptions'),
   getDispositions: () =>
     request<{ items: unknown[]; ResponseStatus?: unknown }>('/dispositions'),
+  getSubscribeNotifications: (q = '') =>
+    request<{ items: unknown[] }>(`/subscribe-notifications${q}`),
+  getDispositionNotifications: (q = '') =>
+    request<{ items: unknown[] }>(`/disposition-notifications${q}`),
+  postSubscribe: (body: unknown) =>
+    request<unknown>('/subscriptions', { method: 'POST', body: JSON.stringify(body) }),
+  deleteSubscribe: (id: string) =>
+    request<unknown>(`/subscriptions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  postDisposition: (body: unknown) =>
+    request<unknown>('/dispositions', { method: 'POST', body: JSON.stringify(body) }),
+  deleteDisposition: (id: string) =>
+    request<unknown>(`/dispositions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Catalog / VIIDServers / VIAS
+  getCatalog: (coll: string) => request<unknown>(`/catalog/${encodeURIComponent(coll)}`),
+  getVIIDServers: () => request<unknown>('/viid-servers'),
+  getVIASTasks: () => request<unknown>('/vias/tasks'),
+  postVIASTask: (body: unknown) =>
+    request<unknown>('/vias/tasks', { method: 'POST', body: JSON.stringify(body) }),
+  getVIASCapability: (name: string) =>
+    request<unknown>(`/vias/capability/${encodeURIComponent(name)}`),
 
   // Resources（GA/T 1400.4 资源对象控制面）
   listResourceKinds: () =>
@@ -192,5 +213,14 @@ export const controlApi = {
   getResourceInfo: (kind: string, id: string) =>
     request<ResourceSingleEnvelope>(
       `/resources/${encodeURIComponent(kind)}/list/${encodeURIComponent(id)}/info`,
+    ),
+  getResourceData: (kind: string, id: string) =>
+    request<ResourceSingleEnvelope>(
+      `/resources/${encodeURIComponent(kind)}/list/${encodeURIComponent(id)}/data`,
+    ),
+  putResourceData: (kind: string, id: string, body: unknown) =>
+    request<ResourceCreateResponse>(
+      `/resources/${encodeURIComponent(kind)}/list/${encodeURIComponent(id)}/data`,
+      { method: 'PUT', body: JSON.stringify(body) },
     ),
 }

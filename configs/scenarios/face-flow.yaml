@@ -1,0 +1,35 @@
+# Face flow — 覆盖非 Person Kind 的资源推送场景。
+id: face-flow
+name: "Face flow demo"
+tags: [demo, faces]
+nodes:
+  - ref: collector
+    role: device
+    listen: ":14111"
+    capabilities: [system, collection, capture-agent]
+  - ref: viewer
+    role: platform-small
+    listen: ":14112"
+    capabilities: [system, collection, data-service, cascade]
+
+subscriptions:
+  - subscriber: viewer
+    publisher: collector
+    topic: Face
+    interval: 5s
+    receiveAddr: "http://127.0.0.1:14112/VIID/SubscribeNotifications"
+
+resources:
+  - node: collector
+    kind: Face
+    rate: 1
+
+exceptions:
+  registerDropRate: 0
+  keepaliveJitter: 0s
+  subscribeRejectRate: 0
+  latencySpike: 0s
+
+schedule:
+  autoStart: false
+  duration: 0s

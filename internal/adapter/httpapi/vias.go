@@ -182,6 +182,7 @@ func (s *Server) handleVIASTasksCreate(c echo.Context) error {
 		m["CreatedAt"] = time.Now().UTC().Format(time.RFC3339)
 		s.vias.tasks[id] = m
 		ids = append(ids, id)
+		s.persistVIASTask(id, m)
 	}
 	s.vias.mu.Unlock()
 	return c.JSON(http.StatusOK, map[string]any{
@@ -215,6 +216,7 @@ func (s *Server) handleVIASTaskPut(c echo.Context) error {
 	s.vias.mu.Lock()
 	s.vias.tasks[id] = body
 	s.vias.mu.Unlock()
+	s.persistVIASTask(id, body)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -224,6 +226,7 @@ func (s *Server) handleVIASTaskDelete(c echo.Context) error {
 	delete(s.vias.tasks, id)
 	delete(s.vias.taskRes, id)
 	s.vias.mu.Unlock()
+	s.persistVIASTaskDelete(id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -473,6 +476,7 @@ func (s *Server) handleVIASRulesUpsert(c echo.Context) error {
 			m["AnalysisRuleID"] = id
 		}
 		s.vias.rules[id] = m
+		s.persistVIASRule(id, m)
 		n++
 	}
 	s.vias.mu.Unlock()
@@ -495,6 +499,7 @@ func (s *Server) handleVIASRuleDelete(c echo.Context) error {
 	s.vias.mu.Lock()
 	delete(s.vias.rules, id)
 	s.vias.mu.Unlock()
+	s.persistVIASRuleDelete(id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 

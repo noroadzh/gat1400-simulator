@@ -96,6 +96,13 @@ func migrate(db *sql.DB) error {
 			created_at  DATETIME NOT NULL,
 			updated_at  DATETIME NOT NULL
 		);`,
+		`CREATE TABLE IF NOT EXISTS viid_object (
+			bucket  TEXT NOT NULL,
+			id      TEXT NOT NULL,
+			payload TEXT NOT NULL,
+			PRIMARY KEY (bucket, id)
+		);`,
+		`CREATE INDEX IF NOT EXISTS idx_viid_object_bucket ON viid_object(bucket);`,
 	}
 	for _, s := range stmts {
 		if _, err := db.Exec(s); err != nil {

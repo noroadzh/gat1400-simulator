@@ -97,6 +97,7 @@ func (s *Server) handleVIIDServersUpsert(c echo.Context) error {
 			m["VIIDServerID"] = id
 		}
 		s.servers.upsert(id, m)
+		s.persistVIIDServer(id, m)
 		n++
 	}
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(""), "ItemCount": n})
@@ -125,6 +126,7 @@ func (s *Server) handleVIIDServerPut(c echo.Context) error {
 	}
 	body["VIIDServerID"] = id
 	s.servers.upsert(id, body)
+	s.persistVIIDServer(id, body)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }
 
@@ -133,5 +135,6 @@ func (s *Server) handleVIIDServerDelete(c echo.Context) error {
 	if !s.servers.delete(id) {
 		return c.JSON(http.StatusNotFound, response.Error(id, response.CodeNotFound, "not found"))
 	}
+	s.persistVIIDServerDelete(id)
 	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(id)})
 }

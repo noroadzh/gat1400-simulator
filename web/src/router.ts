@@ -34,6 +34,12 @@ const router = createRouter({
       meta: { title: 'Subscriptions', icon: 'Bell' }
     },
     {
+      path: '/protocol-extra',
+      name: 'protocol-extra',
+      component: () => import('@/views/ProtocolExtraView.vue'),
+      meta: { title: 'Catalog / VIAS', icon: 'Collection' }
+    },
+    {
       path: '/captures',
       name: 'captures',
       component: () => import('@/views/CapturesView.vue'),
