@@ -2,7 +2,7 @@
 
 > 适用范围：本文档描述本模拟器实现的 GA/T 1400.4《应用平台接口协议要求》REST 接口。  
 > 字段命名遵循原标准。错误码、字段名、URL 路径均与官方规范一致。  
-> 国标 PDF 原文见 [standards/](./standards/)；文档索引：[README.md](./README.md)
+> 国标 PDF 原文见 [07-standards/](../07-standards/)；文档索引：[../README.md](../README.md)
 
 ## 一、基础信息
 
@@ -467,4 +467,4 @@ Content-Type: application/json
 
 ---
 
-> 下一节建议阅读：[docs/USER_GUIDE.md](./USER_GUIDE.md)（场景 / 配置 / 接口使用）
+> 下一节建议阅读：[USER_GUIDE.md](../03-user-guide/USER_GUIDE.md)（场景 / 配置 / 接口使用）

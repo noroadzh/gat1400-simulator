@@ -16,7 +16,7 @@
 - cmd/  &rarr;  可执行程序入口
 - configs/  &rarr;  配置文件，默认配置文件、YAML场景文件都在里面
 - data/  &rarr;  SQLite数据库存放目录，运行时生成，gitignored中忽略
-- docs/  &rarr;  项目文档（索引见 docs/README.md）；国标 PDF 在 docs/standards/
+- docs/  &rarr;  项目文档按阶段分目录（索引见 docs/README.md）；国标 PDF 在 docs/07-standards/
 - .cursor/rules/  &rarr;  Cursor Agent 规则（*.mdc）；根目录 .cursorrules 为摘要
 - openspec/  &rarr;  OpenSpec变更管理文档记录所有功能、bug相关文档的描述、设计、任务等，gitignored中忽略，仅本地维护
 - web/  &rarr;  前端页面工程

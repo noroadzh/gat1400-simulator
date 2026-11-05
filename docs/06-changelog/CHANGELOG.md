@@ -6,6 +6,11 @@
 
 ## [未发布]
 
+### chore(docs) — 文档按阶段分目录
+
+- `docs/` 按阶段建目录：`01-architecture` … `06-changelog`、`07-standards`
+- 索引见 `docs/README.md`；根 `README.md` 与 Cursor rules 路径已同步
+
 ### feat(protocol) — 补齐表 13 根资源 / 通知实例 / 表 14 VIAS 子集
 
 - `GET /VIID`、`GET /VIID/System`：资源目录与系统属性

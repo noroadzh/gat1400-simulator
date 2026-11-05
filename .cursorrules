@@ -32,20 +32,20 @@ domain 仅标准库；禁止跨层反向依赖
 | `internal/ui` | Web BFF |
 | `web/src` | Vue SPA |
 | `configs/` | default.yaml + scenarios/ |
-| `docs/` | 中文文档；`docs/standards/` 国标 PDF |
+| `docs/` | 中文文档（按阶段分目录，见 `docs/README.md`）；`docs/07-standards/` 国标 PDF |
 | `test/contract` | 黄金样本 |
 | `test/e2e` | 真实 TCP e2e |
 | `openspec/` | 本地变更管理（gitignored） |
 
 ## 硬约束
 
-1. 协议字段/路径以 `docs/PROTOCOL.md` + `test/contract/golden/` 为准
+1. 协议字段/路径以 `docs/02-protocol/PROTOCOL.md` + `test/contract/golden/` 为准
 2. Nonce / UUID 用 `crypto/rand`，禁止 `time.Now` 当熵源
 3. 12 Kind 增删须同步 `Kind`/`CollectionOf`/`IDOf`/`AllKinds`
 4. Cascade POST 删除优先于创建（`*IDList` / `DeleteOperate`）
 5. e2e 禁止 mock HTTP 层；必须真实 socket
 6. 前端控制面只走 `/api/control/*`；资源 URI 用 `/VIID/<Collection>`
-7. 中文文档优先；执行 plan 写入 `.cursor/plan/`，勿散落仓库根
+7. 中文文档优先（`docs/0N-*/`）；执行 plan 写入 `.cursor/plan/`，勿散落仓库根
 8. 不提交密钥、`data/*.db`、`web/node_modules`、`openspec/`（若已 gitignore）
 
 ## 常用命令

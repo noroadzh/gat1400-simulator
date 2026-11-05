@@ -2,7 +2,7 @@
 
 > 文档配套代码版本：v0.2.0  
 > 适用读者：使用本模拟器验证平台 / 设备协议栈的工程师、QA、协议研发  
-> 文档索引：[README.md](./README.md) · 协议细节：[PROTOCOL.md](./PROTOCOL.md)
+> 文档索引：[../README.md](../README.md) · 协议细节：[PROTOCOL.md](../02-protocol/PROTOCOL.md)
 
 ## 一、快速开始
 
@@ -276,4 +276,4 @@ go test -v ./test/contract/...
 
 ---
 
-> 下一节建议阅读：[docs/OPERATIONS.md](./OPERATIONS.md)（部署、监控、升级）
+> 下一节建议阅读：[TESTING.md](../04-testing/TESTING.md)（测试方法、覆盖率）

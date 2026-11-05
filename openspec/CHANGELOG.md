@@ -1,6 +1,6 @@
 # OpenSpec 变更日志
 
-> 本文件记录所有已归档 change 的里程碑。与 `docs/CHANGELOG.md` 镜像，但按 OpenSpec change 粒度组织。
+> 本文件记录所有已归档 change 的里程碑。与 `docs/06-changelog/CHANGELOG.md` 镜像，但按 OpenSpec change 粒度组织。
 
 ---
 

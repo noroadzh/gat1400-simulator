@@ -6,7 +6,7 @@ alwaysApply: false
 
 # GA/T 1400.4 协议约束
 
-权威细节：`docs/PROTOCOL.md`；国标原文：`docs/standards/` 第 4 部分 PDF。
+权威细节：`docs/02-protocol/PROTOCOL.md`；国标原文：`docs/07-standards/` 第 4 部分 PDF。
 
 ## 硬性约定
 
@@ -32,4 +32,4 @@ alwaysApply: false
 
 20 位：`8(区划)+2(行业)+2(类型)+2(子类型)+6(序号)`，用 `internal/domain/ids.Generator`。
 
-改协议行为必须更新黄金样本与 `docs/PROTOCOL.md`。
+改协议行为必须更新黄金样本与 `docs/02-protocol/PROTOCOL.md`。

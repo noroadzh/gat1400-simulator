@@ -6,20 +6,20 @@ alwaysApply: false
 
 # 文档与 OpenSpec
 
-## docs/ 结构
+## docs/ 结构（按阶段分目录，见 `docs/README.md`）
 
-| 文件 | 用途 |
-|------|------|
-| `docs/README.md` | 文档索引 |
-| `ARCHITECTURE.md` | 拓扑、分层、数据流 |
-| `PROTOCOL.md` | VIID 路由与字段（实现真相源） |
-| `USER_GUIDE.md` | 配置、场景 YAML、BFF API |
-| `OPERATIONS.md` | 部署、监控、备份 |
-| `TESTING.md` | 测试方法 |
-| `CHANGELOG.md` | 用户可读变更 |
-| `standards/` | 国标 PDF（只读参考，勿改） |
+| 阶段 | 目录 | 主文档 |
+|:----:|------|--------|
+| — | `docs/README.md` | 分阶段索引 |
+| 1 认识系统 | `01-architecture/` | `ARCHITECTURE.md` |
+| 2 协议对接 | `02-protocol/` | `PROTOCOL.md`（实现真相源） |
+| 3 上手联调 | `03-user-guide/` | `USER_GUIDE.md` |
+| 4 测试验收 | `04-testing/` | `TESTING.md` |
+| 5 部署运维 | `05-operations/` | `OPERATIONS.md` |
+| 6 变更追溯 | `06-changelog/` | `CHANGELOG.md` |
+| 2† 国标对照 | `07-standards/` | 国标 PDF（只读，勿改） |
 
-协议行为变更：先改代码与测试，再更新 `PROTOCOL.md` / `CHANGELOG.md`。
+协议行为变更：先改代码与测试，再更新 `02-protocol/PROTOCOL.md` / `06-changelog/CHANGELOG.md`。
 执行 plan 写到 `.cursor/plan/`，不要写进 `docs/` 或仓库根。
 
 ## OpenSpec（本地）

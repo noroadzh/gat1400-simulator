@@ -2,7 +2,7 @@
 
 > 文档配套代码版本：v0.2.0  
 > 适用读者：参与本项目开发的工程师  
-> 文档索引：[README.md](./README.md) · 变更记录：[CHANGELOG.md](./CHANGELOG.md)
+> 文档索引：[../README.md](../README.md) · 下一篇：[OPERATIONS.md](../05-operations/OPERATIONS.md)
 
 ## 一、运行测试
 
@@ -205,4 +205,4 @@ DEBUG_SQL=1 go test -v ./internal/adapter/storage/...
 
 ---
 
-> 下一节建议阅读：[docs/CHANGELOG.md](./CHANGELOG.md)（变更历史）
+> 下一节建议阅读：[OPERATIONS.md](../05-operations/OPERATIONS.md)（部署、监控、升级）

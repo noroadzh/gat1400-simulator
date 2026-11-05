@@ -2,7 +2,7 @@
 
 > 文档配套代码版本：v0.2.0  
 > 适用读者：运维、SRE、平台部署工程师  
-> 文档索引：[README.md](./README.md) · 上一篇：[USER_GUIDE.md](./USER_GUIDE.md)
+> 文档索引：[../README.md](../README.md) · 上一篇：[TESTING.md](../04-testing/TESTING.md)
 
 ## 一、部署形态
 
@@ -219,4 +219,4 @@ sqlite3 data/captures.db "VACUUM;"
 
 ---
 
-> 下一节建议阅读：[docs/TESTING.md](./TESTING.md)（测试方法、覆盖率）
+> 下一节建议阅读：[CHANGELOG.md](../06-changelog/CHANGELOG.md)（变更历史）

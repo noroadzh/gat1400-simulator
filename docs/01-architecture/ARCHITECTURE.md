@@ -2,7 +2,7 @@
 
 > 文档配套代码版本：v0.2.0  
 > 最后更新：2026-11-05  
-> 文档索引：[README.md](./README.md) · 下一篇：[PROTOCOL.md](./PROTOCOL.md)
+> 文档索引：[../README.md](../README.md) · 下一篇：[PROTOCOL.md](../02-protocol/PROTOCOL.md)
 
 本文档从全局到细节描述了 GA/T 1400 协议模拟器的系统组成、模块划分、数据流转路径，并给出代码层面的分层纪律。
 
@@ -219,4 +219,4 @@ internal/domain/   ──→ 仅依赖标准库
 
 ---
 
-> 下一节建议阅读：[docs/PROTOCOL.md](./PROTOCOL.md)（协议字段细节）
+> 下一节建议阅读：[PROTOCOL.md](../02-protocol/PROTOCOL.md)（协议字段细节）

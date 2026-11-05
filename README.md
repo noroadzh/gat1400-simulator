@@ -62,7 +62,7 @@ gat1400-simulator/
 │   ├── captures.db           # 抓包数据
 │   └── nonces.db             # Digest nonce 表
 │
-├── docs/                     # 项目文档（中文）— 见 docs/README.md 索引
+├── docs/                     # 项目文档（按阶段分目录）— 见 docs/README.md
 │   ├── README.md             # 文档索引与维护约定
 │   ├── ARCHITECTURE.md       # 架构说明：组件拓扑、数据流、分层纪律
 │   ├── PROTOCOL.md           # 协议参考：12 Kind、System、Catalog、Cascade、错误码
@@ -236,7 +236,7 @@ docker-compose exec backend ./gat1400-sim -healthcheck
 
 ## Web 控制面（BFF API 速查）
 
-完整字段与示例见 `docs/USER_GUIDE.md`。控制面所有接口均挂在 `/api/control/*`，并以 WebSocket 在 `/ws/events` 推送实时事件。
+完整字段与示例见 `docs/03-user-guide/USER_GUIDE.md`。控制面所有接口均挂在 `/api/control/*`，并以 WebSocket 在 `/ws/events` 推送实时事件。
 
 | 域 | 端点 | 说明 |
 |----|------|------|
@@ -258,14 +258,17 @@ docker-compose exec backend ./gat1400-sim -healthcheck
 
 ## 文档导航
 
-| 文档 | 内容 |
-|------|------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构、组件拓扑、数据流、分层纪律 |
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | GA/T 1400.4 协议路由、12 Kind 资源对象、System、Catalog、Cascade、错误码 |
-| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | 配置、场景 YAML、Web BFF API |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | 本地部署、Docker、TLS、systemd、监控 |
-| [docs/TESTING.md](docs/TESTING.md) | 黄金样本、e2e、覆盖率、CI |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | 变更历史 |
+按使用阶段分目录（完整说明见 [docs/README.md](docs/README.md)）：
+
+| 阶段 | 目录 | 文档 | 内容 |
+|:----:|------|------|------|
+| 1 认识系统 | [`01-architecture/`](docs/01-architecture/) | [ARCHITECTURE](docs/01-architecture/ARCHITECTURE.md) | 系统架构、组件拓扑、数据流、分层纪律 |
+| 2 协议对接 | [`02-protocol/`](docs/02-protocol/) | [PROTOCOL](docs/02-protocol/PROTOCOL.md) | GA/T 1400.4 路由、12 Kind、System/Catalog/Cascade/VIAS |
+| 2† 国标对照 | [`07-standards/`](docs/07-standards/) | [standards](docs/07-standards/) | 国标 PDF 原文（只读对照） |
+| 3 上手联调 | [`03-user-guide/`](docs/03-user-guide/) | [USER_GUIDE](docs/03-user-guide/USER_GUIDE.md) | 配置、场景 YAML、Web BFF API |
+| 4 测试验收 | [`04-testing/`](docs/04-testing/) | [TESTING](docs/04-testing/TESTING.md) | 黄金样本、e2e、覆盖率、CI |
+| 5 部署运维 | [`05-operations/`](docs/05-operations/) | [OPERATIONS](docs/05-operations/OPERATIONS.md) | 本地部署、Docker、TLS、systemd、监控 |
+| 6 变更追溯 | [`06-changelog/`](docs/06-changelog/) | [CHANGELOG](docs/06-changelog/CHANGELOG.md) | 变更历史 |
 
 ## 端口分配
 
