@@ -182,7 +182,10 @@ func (s *Server) handleSubscribeCreate(c echo.Context) error {
 	if !ok {
 		// Generate an ID when missing so the simulator can accept arbitrary clients.
 		body["SubscribeID"] = s.ids.SubscribeID()
-		id, _ = s.subRepo.store(body)
+		if id, ok = s.subRepo.store(body); !ok {
+			s.log.Error("failed to store subscription after ID generation", "subscribeID", body["SubscribeID"])
+			return c.JSON(http.StatusInternalServerError, response.Error("", response.CodeFailure, "internal error"))
+		}
 	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus": response.OK(id),
@@ -235,7 +238,9 @@ func (s *Server) handleSubscribeBulk(c echo.Context) error {
 // GA/T 1400.4 §5.4 Subscribe Batch Delete：按 SubscribeIDList 批量删除。
 func (s *Server) handleSubscribeBulkDelete(c echo.Context) error {
 	var body map[string]any
-	_ = c.Bind(&body)
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
+	}
 	if arr, ok := body["SubscribeIDList"].([]any); ok {
 		for _, item := range arr {
 			if id, ok := item.(string); ok {
@@ -325,7 +330,10 @@ func (s *Server) handleDispositionCreate(c echo.Context) error {
 	id, ok := s.subRepo.storeDisposition(body)
 	if !ok {
 		body["DispositionID"] = s.ids.SubscribeID()
-		id, _ = s.subRepo.storeDisposition(body)
+		if id, ok = s.subRepo.storeDisposition(body); !ok {
+			s.log.Error("failed to store disposition after ID generation", "dispositionID", body["DispositionID"])
+			return c.JSON(http.StatusInternalServerError, response.Error("", response.CodeFailure, "internal error"))
+		}
 	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus": response.OK(id),
@@ -360,7 +368,9 @@ func (s *Server) handleDispositionDelete(c echo.Context) error {
 // GA/T 1400.4 §5.4 Disposition Batch Update：批量更新布控（请求体 DispositionObject 列表）。
 func (s *Server) handleDispositionBulk(c echo.Context) error {
 	var body map[string]any
-	_ = c.Bind(&body)
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
+	}
 	if arr, ok := body["DispositionObject"].([]any); ok {
 		for _, item := range arr {
 			if m, ok := item.(map[string]any); ok {
@@ -375,7 +385,9 @@ func (s *Server) handleDispositionBulk(c echo.Context) error {
 // GA/T 1400.4 §5.4 Disposition Batch Delete：按 DispositionIDList 批量删除。
 func (s *Server) handleDispositionBulkDelete(c echo.Context) error {
 	var body map[string]any
-	_ = c.Bind(&body)
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
+	}
 	if arr, ok := body["DispositionIDList"].([]any); ok {
 		for _, item := range arr {
 			if id, ok := item.(string); ok {

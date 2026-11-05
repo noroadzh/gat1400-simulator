@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -18,18 +19,23 @@ import (
 // 关闭触发 sql.ErrConnDone 或 Windows 上的文件锁冲突。
 type captureReader struct {
 	db        *sql.DB
+	log       *slog.Logger
 	closeOnce sync.Once
 	closeErr  error
 }
 
 // NewCaptureReader 返回一个 sqlite 后端的 CaptureReader。
 // 与其他 store 共享同一数据库连接池。
-func NewCaptureReader(path string) (ports.CaptureReader, error) {
+//
+// log 用于报告 JSON 反序列化失败：抓包记录是协议调试的核心证据，
+// 字段反序列化失败意味着该条记录在 UI 上会显示空字段，不留日志就
+// 无法定位是协议字段缺失还是 SQLite 损坏。
+func NewCaptureReader(path string, log *slog.Logger) (ports.CaptureReader, error) {
 	db, err := open(path)
 	if err != nil {
 		return nil, err
 	}
-	return &captureReader{db: db}, nil
+	return &captureReader{db: db, log: log}, nil
 }
 
 // Query 返回符合过滤器的最新抓包记录，按 id DESC 排序（"最新优先"），
@@ -105,9 +111,25 @@ func (r *captureReader) Query(filter ports.CaptureFilter) ([]ports.CaptureEntry,
 			return nil, err
 		}
 		e.StartedAt = started.UTC()
-		_ = json.Unmarshal([]byte(header), &e.Header)
-		_ = json.Unmarshal([]byte(request), &e.Request)
-		_ = json.Unmarshal([]byte(response), &e.Response)
+		if r.log != nil {
+			if err := json.Unmarshal([]byte(header), &e.Header); err != nil {
+				r.log.Warn("capture header decode failed",
+					slog.Int64("id", e.ID), slog.String("error", err.Error()))
+			}
+			if err := json.Unmarshal([]byte(request), &e.Request); err != nil {
+				r.log.Warn("capture request decode failed",
+					slog.Int64("id", e.ID), slog.String("error", err.Error()))
+			}
+			if err := json.Unmarshal([]byte(response), &e.Response); err != nil {
+				r.log.Warn("capture response decode failed",
+					slog.Int64("id", e.ID), slog.String("error", err.Error()))
+			}
+		} else {
+			// 测试或无 logger 场景：保持旧行为（失败留零值）。
+			_ = json.Unmarshal([]byte(header), &e.Header)
+			_ = json.Unmarshal([]byte(request), &e.Request)
+			_ = json.Unmarshal([]byte(response), &e.Response)
+		}
 		e.Error = errStr
 		out = append(out, e)
 	}

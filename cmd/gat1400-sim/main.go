@@ -15,9 +15,10 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
+
+	"strings"
 
 	"github.com/noroadzh/gat1400-simulator/internal/adapter/capture"
 	"github.com/noroadzh/gat1400-simulator/internal/adapter/httpapi"
@@ -31,6 +32,49 @@ import (
 	"github.com/noroadzh/gat1400-simulator/internal/domain/ids"
 	"github.com/noroadzh/gat1400-simulator/internal/ui"
 )
+
+// ProtocolBaseURL 把 ":14000" 形式监听地址转换为 BFF 可访问的 base URL。
+func protocolBaseURL(listen string) string {
+	addr := listen
+	if addr == "" {
+		addr = ":14000"
+	}
+	host := "127.0.0.1"
+	if strings.HasPrefix(addr, ":") {
+		return "http://" + host + addr
+	}
+	if strings.Contains(addr, ":") {
+		return "http://" + addr
+	}
+	return "http://" + addr + ":14000"
+}
+
+// httpapiConfig 将全局 Config 适配为 httpapi.Config 形状。
+func httpapiConfig(cfg *config.Config) *httpapi.Config {
+	return &httpapi.Config{
+		Auth: httpapi.AuthConfig{
+			Realm:    cfg.Auth.Realm,
+			Username: cfg.Auth.Username,
+			Password: cfg.Auth.Password,
+			Qop:      cfg.Auth.Qop,
+		},
+	}
+}
+
+// uiConfig 将全局 Config 适配为 BFF Config 形状。
+//
+// 关键：把协议端监听地址转换为 BFF 可访问的 base URL。
+func uiConfig(cfg *config.Config) *ui.Config {
+	return &ui.Config{
+		Control: ui.ControlConfig{
+			Listen: cfg.Control.Listen,
+		},
+		Protocol: ui.ProtocolConfig{
+			Listen:  cfg.Protocol.Listen,
+			BaseURL: protocolBaseURL(cfg.Protocol.Listen),
+		},
+	}
+}
 
 var (
 	// profile 默认值固定为 "info"，与项目旧行为一致；显式 --profile=prod 才会
@@ -123,7 +167,7 @@ func run(profile string) (ready bool, err error) {
 	}
 	defer func() { _ = nonceStore.Close() }()
 
-	captureReader, err := storage.NewCaptureReader(cfg.Storage.Path)
+	captureReader, err := storage.NewCaptureReader(cfg.Storage.Path, rootLogger)
 	if err != nil {
 		return true, fmt.Errorf("open capture reader: %w", err)
 	}
@@ -243,43 +287,3 @@ var (
 	_ ports.NodeService     = (*application.NodeService)(nil)
 	_ ports.ScenarioService = (*application.ScenarioService)(nil)
 )
-
-// httpapiConfig adapts the global Config to the httpapi.Config shape.
-func httpapiConfig(c *config.Config) *httpapi.Config {
-	return &httpapi.Config{
-		Auth: httpapi.AuthConfig{
-			Realm:    c.Auth.Realm,
-			Username: c.Auth.Username,
-			Password: c.Auth.Password,
-			Qop:      c.Auth.Qop,
-		},
-	}
-}
-
-// uiConfig adapts the global Config to the BFF Config shape.
-//
-// 关键：把协议端监听地址（`:9000`）转换成 BFF 可访问的 base URL（`http://127.0.0.1:9000`）。
-// BFF 资源对象端点组（/api/control/resources/*）通过该 base URL 透传到协议端。
-func uiConfig(c *config.Config) *ui.Config {
-	u := &ui.Config{}
-	u.Control.Listen = c.Control.Listen
-	u.Protocol.Listen = c.Protocol.Listen
-	u.Protocol.BaseURL = protocolBaseURL(c.Protocol.Listen)
-	return u
-}
-
-// protocolBaseURL 把 ":14000" 形式监听地址转换为 BFF 可访问的 base URL。
-func protocolBaseURL(listen string) string {
-	addr := listen
-	if addr == "" {
-		addr = ":14000"
-	}
-	host := "127.0.0.1"
-	if strings.HasPrefix(addr, ":") {
-		return "http://" + host + addr
-	}
-	if strings.Contains(addr, ":") {
-		return "http://" + addr
-	}
-	return "http://" + addr + ":14000"
-}

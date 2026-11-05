@@ -33,17 +33,22 @@ type Server struct {
 	protocolClient *protocolClient
 }
 
+// ControlConfig holds BFF control-plane listener settings.
+type ControlConfig struct {
+	Listen string `yaml:"listen"`
+}
+
+// ProtocolConfig describes the protocol-end (UAS) address and base URL; the BFF
+// resource-control endpoints proxy requests to this base URL.
+type ProtocolConfig struct {
+	Listen  string `yaml:"listen"`
+	BaseURL string `yaml:"baseUrl"`
+}
+
 // Config is the configuration envelope used by the BFF.
 type Config struct {
-	Control struct {
-		Listen string `yaml:"listen"`
-	} `yaml:"control"`
-	// Protocol 描述协议端（UAS）监听地址与对外 base URL；
-	// BFF 资源对象控制面端点组会把请求透传到该 base URL。
-	Protocol struct {
-		Listen  string `yaml:"listen"`
-		BaseURL string `yaml:"baseUrl"`
-	} `yaml:"protocol"`
+	Control  ControlConfig  `yaml:"control"`
+	Protocol ProtocolConfig `yaml:"protocol"`
 }
 
 // NewServer 装配 BFF。captureRead 供仪表盘抓包面板查询；recorder 保留用于实时录制与广播副作用。

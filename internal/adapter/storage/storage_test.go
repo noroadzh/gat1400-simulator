@@ -103,7 +103,7 @@ func TestCaptureStore_AppendAndQuery(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = cs.Close() })
 
-	cr, err := NewCaptureReader(path)
+	cr, err := NewCaptureReader(path, nil)
 	if err != nil {
 		t.Fatalf("NewCaptureReader: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestCaptureStore_QueryFilters(t *testing.T) {
 		t.Fatalf("NewCaptureStore: %v", err)
 	}
 	t.Cleanup(func() { _ = cs.Close() })
-	cr, err := NewCaptureReader(path)
+	cr, err := NewCaptureReader(path, nil)
 	if err != nil {
 		t.Fatalf("NewCaptureReader: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestCaptureReader_ExportJSONL(t *testing.T) {
 	ctx := context.Background()
 	cs, _ := NewCaptureStore(ctx, path)
 	t.Cleanup(func() { _ = cs.Close() })
-	cr, _ := NewCaptureReader(path)
+	cr, _ := NewCaptureReader(path, nil)
 	t.Cleanup(func() { _ = cr.Close() })
 
 	now := time.Now().UTC()
@@ -239,7 +239,7 @@ func TestCaptureReader_ExportHAR(t *testing.T) {
 	ctx := context.Background()
 	cs, _ := NewCaptureStore(ctx, path)
 	t.Cleanup(func() { _ = cs.Close() })
-	cr, _ := NewCaptureReader(path)
+	cr, _ := NewCaptureReader(path, nil)
 	t.Cleanup(func() { _ = cr.Close() })
 
 	_ = cs.Append(ports.CaptureEntry{NodeID: "A", Direction: "inbound", Method: "POST", Path: "/x", URL: "http://x/x", Status: 200, StartedAt: time.Now().UTC()})

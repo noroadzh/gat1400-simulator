@@ -77,7 +77,7 @@ func TestCaptureE2E_RecordsEveryRequest(t *testing.T) {
 
 	// Give the async recorder a moment to persist.
 	// (In production the recorder uses a buffered channel, so 100ms is safe.)
-	reader, err := storage.NewCaptureReader(dbPath)
+	reader, err := storage.NewCaptureReader(dbPath, nil)
 	if err != nil {
 		t.Fatalf("NewCaptureReader: %v", err)
 	}

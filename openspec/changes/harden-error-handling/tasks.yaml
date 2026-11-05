@@ -1,0 +1,88 @@
+# hardening 错误处理 — 变更任务清单
+
+## 1. Cascade：3 处 `_ = c.Bind` 改为显式 400
+
+**文件**：`internal/adapter/httpapi/cascade.go`
+
+**现状**（已核实，全仓仅这 3 处 `_ = c.Bind`）：
+- `:238` `handleSubscribeBulkDelete`（`DELETE /VIID/Subscribes`）
+- `:363` `handleDispositionBulk`（`PUT /VIID/Dispositions`）
+- `:378` `handleDispositionBulkDelete`（`DELETE /VIID/Dispositions`）
+
+同文件其余 7 处 Bind（`:170, :198, :221, :264, :314, :341, :402`）**已正确**返回 400，参照其写法（`response.Error("", response.CodeInvalid, "invalid body")`）。
+
+**改动**：3 处统一替换为
+```go
+if err := c.Bind(&body); err != nil {
+    return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid body"))
+}
+```
+
+**验收**：
+- `grep -rn '_ = c\.Bind' --include='*.go' .` 返回空。
+- `go test ./internal/adapter/httpapi/...` 通过。
+- 新增单测 3 个：畸形 Body → 400 且 repo 未被修改；合法 `{}` → 200；无 Body 的 DELETE → 200。
+
+## 2. System：UnRegister / Keepalive 失败走日志
+
+**文件**：`internal/adapter/httpapi/system.go`
+
+`Server` 结构体**已有** `log *slog.Logger` 字段（`server.go:31`），无需改 constructor。
+
+**改动**：
+- `:127` UnRegister ——
+  ```go
+  if err := s.nodeSvc.RemoveNode(c.Request().Context(), body.UnRegisterObject.DeviceID); err != nil {
+      s.log.Warn("node unregister failed", "event", "node_unregister_failed", "node_id", body.UnRegisterObject.DeviceID, "error", err)
+  }
+  ```
+- `:141` Keepalive ——
+  ```go
+  if err := s.nodeSvc.MarkSeen(c.Request().Context(), id); err != nil {
+      s.log.Warn("node keepalive failed", "event", "node_markseen_failed", "node_id", id, "error", err)
+  }
+  ```
+响应逻辑不变（仍 200）。
+
+**验收**：`go test ./internal/adapter/httpapi/...` 通过；新增用例注入失败的 NodeService 端口，断言响应 200 且日志含对应 event。
+
+## 3. 日志轮转失败可见
+
+**文件**：`internal/app/logging/logger.go`
+
+**现状**：`dailyWriter`（`:246`）无 logger 字段；`newDailyWriter(rot)`（`:255`）单一实参，唯一产品调用点在 `:194`；测试调用点 `daily_test.go:51`。
+
+**改动**：`dailyWriter` 增 `log *slog.Logger`；`newDailyWriter(rot, log)`；`maybeRotate` 中
+```go
+if err := d.rot.Rotate(); err != nil {
+    d.log.Error("log rotation failed", "event", "log_rotate_failed", "error", err)
+}
+```
+同步更新 `daily_test.go:51` 调用。
+
+**验收**：`go test ./internal/app/logging/...` 通过（`make vet` 亦需通过，签名变更会暴露所有调用点）。
+
+## 4. 抓包反序列化失败可见
+
+**文件**：`internal/adapter/storage/capture_reader.go`
+
+**现状**：`captureReader`（`:20`）无 logger 字段；`NewCaptureReader(path)`（`:27`）单一实参。调用点：产品 `main.go:126`、测试 4 处（`storage_test.go` ×4、`capture_e2e_test.go:80`）。
+
+**改动**：`captureReader` 增 `log *slog.Logger`；`NewCaptureReader(path, log)`；`Query` 中 3 处 Unmarshal 失败各记一条 Warn（`event=capture_parse_failed`，含 `id`、`field`、`error`），**行仍返回**，其余字段照常填充。
+
+签名变更需同步更新 5 个调用点（1 产品 + 4 测试）。
+
+**验收**：`go test ./internal/adapter/storage/... ./test/e2e/...` 通过；新增用例写入损坏 header 的行，断言行仍在结果中且日志含 `field=header`。
+
+## 5. 契约回写 spec 主目录
+
+**文件**：`openspec/specs/adapter-httpapi/spec.md`、`openspec/specs/logging/spec.md`、`openspec/specs/web-bff/spec.md`
+
+delta 要求见 `specs/*/spec.md`。归档时由 `openspec archive` 合并进主 spec。
+
+**验收**：`openspec validate harden-error-handling --strict` 通过。
+
+## 6. 收尾门禁
+
+- `go build ./... && go vet ./... && go test -race ./...` 全绿。
+- `golangci-lint run` 无新增 issue（当前仓库无 `.golangci.yml`，跑默认规则集）。

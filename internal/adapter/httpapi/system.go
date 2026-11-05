@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -124,7 +125,14 @@ func (s *Server) handleUnRegister(c echo.Context) error {
 	if err := c.Bind(&body); err != nil || body.UnRegisterObject.DeviceID == "" {
 		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "invalid UnRegisterObject"))
 	}
-	_ = s.nodeSvc.RemoveNode(c.Request().Context(), body.UnRegisterObject.DeviceID)
+	// 客户端已完成注销协议动作，本地清理失败不应让它收到错误响应；
+	// 但失败必须可见，否则节点状态与实际不一致且无法排查。
+	if err := s.nodeSvc.RemoveNode(c.Request().Context(), body.UnRegisterObject.DeviceID); err != nil {
+		s.log.Warn("node unregister failed",
+			slog.String("event", "node_unregister_failed"),
+			slog.String("node_id", body.UnRegisterObject.DeviceID),
+			slog.String("error", err.Error()))
+	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus": response.OK(body.UnRegisterObject.DeviceID),
 	})
@@ -138,7 +146,12 @@ func (s *Server) handleKeepalive(c echo.Context) error {
 	if id == "" {
 		return c.JSON(http.StatusBadRequest, response.Error("", response.CodeInvalid, "missing User-Identify header"))
 	}
-	_ = s.nodeSvc.MarkSeen(c.Request().Context(), id)
+	if err := s.nodeSvc.MarkSeen(c.Request().Context(), id); err != nil {
+		s.log.Warn("node keepalive failed",
+			slog.String("event", "node_markseen_failed"),
+			slog.String("node_id", id),
+			slog.String("error", err.Error()))
+	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus": response.OK(id),
 	})
