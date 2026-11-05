@@ -34,6 +34,8 @@ type Server struct {
 	repo        *resourceRepo
 	subRepo     *subscribeRepo
 	catalog     *catalogRepo
+	servers     *viidServerRepo
+	vias        *viasRepo
 	srv         *http.Server
 }
 
@@ -67,6 +69,8 @@ func NewServer(log *slog.Logger, nodeSvc *application.NodeService, scenarioSvc *
 		repo:    newResourceRepo(),
 		subRepo: newSubscribeRepo(),
 		catalog: newCatalogRepo(),
+		servers: newVIIDServerRepo(),
+		vias:    newVIASRepo(),
 	}
 	s.installMiddleware()
 	s.installRoutes()
@@ -141,14 +145,16 @@ func (b viidBinder) Bind(params interface{}, c echo.Context) error {
 	return b.base.Bind(params, c)
 }
 
-// installRoutes 注册全部 GA/T 1400.4 端点。
-// 具体 handler 实现在 collection.go / system.go / cascade.go / catalog.go。
+// installRoutes 注册全部 GA/T 1400.4 端点（表 13 VIID + 表 14 VIAS）。
 func (s *Server) installRoutes() {
+	s.registerRootRoutes()
 	s.registerSystemRoutes()
+	s.registerVIIDServerRoutes()
 	s.registerCollectionRoutes()
 	s.registerDataServiceRoutes()
 	s.registerCascadeRoutes()
 	s.registerCatalogRoutes()
+	s.registerVIASRoutes()
 }
 
 // ServeHTTP implements http.Handler so the server can be wrapped in
@@ -168,6 +174,8 @@ func InstallRoutes(e *echo.Echo, log *slog.Logger, nodeSvc *application.NodeServ
 		repo:    newResourceRepo(),
 		subRepo: newSubscribeRepo(),
 		catalog: newCatalogRepo(),
+		servers: newVIIDServerRepo(),
+		vias:    newVIASRepo(),
 	}
 	e.Use(TraceMiddleware(log))
 	e.Use(CaptureMiddleware(recorder, nodeID))

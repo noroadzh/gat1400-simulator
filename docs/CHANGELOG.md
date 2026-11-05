@@ -6,6 +6,14 @@
 
 ## [未发布]
 
+### feat(protocol) — 补齐表 13 根资源 / 通知实例 / 表 14 VIAS 子集
+
+- `GET /VIID`、`GET /VIID/System`：资源目录与系统属性
+- `/VIID/VIIDServers` CRUD（含种子本机服务）
+- `GET/DELETE /VIID/SubscribeNotifications/:id`、`DispositionNotifications/:id`
+- `/VIAS/*` 分析系统最小实现：Tasks / TaskStatuses / TaskControls / AnalysisRules / SystemCapability
+- 协议文档 §4.0 / §4.3 / §4.5 同步；`httpapi` 单测覆盖根资源、VIIDServers、通知实例、VIAS 主路径
+
 ### feat — 四项优先级：错误处理收尾 / 订阅 BFF / 覆盖率 / 协议深度
 
 - harden：日志日轮转失败改为 Error 日志（`event=log_rotate_failed`）

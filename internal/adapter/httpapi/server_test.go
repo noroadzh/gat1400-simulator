@@ -542,3 +542,190 @@ func TestBinder_FallsBackToJSON(t *testing.T) {
 		t.Fatalf("status = %d", rec.Code)
 	}
 }
+
+// --- 表 13 根资源 / VIIDServers / 通知实例 / 表 14 VIAS ---
+
+func TestVIIDRootAndSystem(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	rec := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/VIID status = %d", rec.Code)
+	}
+	body := decodeResponse(t, rec.Body)
+	list, _ := body["ResourceURIList"].(map[string]any)
+	uris, _ := list["ResourceURI"].([]any)
+	if len(uris) < 5 {
+		t.Fatalf("ResourceURI too short: %v", uris)
+	}
+
+	recSys := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/System", nil))
+	if recSys.Code != http.StatusOK {
+		t.Fatalf("/VIID/System status = %d", recSys.Code)
+	}
+	sysBody := decodeResponse(t, recSys.Body)
+	sys, _ := sysBody["System"].(map[string]any)
+	if sys == nil || sys["Name"] == "" {
+		t.Fatalf("System missing: %v", sysBody)
+	}
+}
+
+func TestVIIDServers_CRUD(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	recList := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/VIIDServers", nil))
+	if recList.Code != http.StatusOK {
+		t.Fatalf("list status = %d", recList.Code)
+	}
+	listBody := decodeResponse(t, recList.Body)
+	sl, _ := listBody["VIIDServerList"].(map[string]any)
+	objs, _ := sl["VIIDServerObject"].([]any)
+	if len(objs) < 1 {
+		t.Fatalf("seed VIIDServer missing: %v", listBody)
+	}
+
+	id := "41000000005030319999"
+	req := mustJSONRequest(t, http.MethodPost, "/VIID/VIIDServers", map[string]any{
+		"VIIDServerList": map[string]any{
+			"VIIDServerObject": []any{
+				map[string]any{"VIIDServerID": id, "ServerName": "peer"},
+			},
+		},
+	})
+	if rec := doRequest(srv, req); rec.Code != http.StatusOK {
+		t.Fatalf("upsert status = %d", rec.Code)
+	}
+
+	recGet := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/VIIDServers/"+id, nil))
+	if recGet.Code != http.StatusOK {
+		t.Fatalf("get status = %d", recGet.Code)
+	}
+
+	recDel := doRequest(srv, httptest.NewRequest(http.MethodDelete, "/VIID/VIIDServers/"+id, nil))
+	if recDel.Code != http.StatusOK {
+		t.Fatalf("delete status = %d", recDel.Code)
+	}
+	recMiss := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/VIIDServers/"+id, nil))
+	if recMiss.Code != http.StatusNotFound {
+		t.Fatalf("get after delete status = %d, want 404", recMiss.Code)
+	}
+}
+
+func TestSubscribeNotification_GetAndDeleteByID(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	req := mustJSONRequest(t, http.MethodPost, "/VIID/SubscribeNotifications",
+		map[string]any{"SubscribeID": "S-Y", "Title": "hit"})
+	rec := doRequest(srv, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create status = %d", rec.Code)
+	}
+	created := decodeResponse(t, rec.Body)
+	nid, _ := created["NotificationID"].(string)
+	if nid == "" {
+		t.Fatalf("NotificationID missing: %v", created)
+	}
+
+	recGet := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/SubscribeNotifications/"+nid, nil))
+	if recGet.Code != http.StatusOK {
+		t.Fatalf("get status = %d body=%s", recGet.Code, recGet.Body.String())
+	}
+
+	recDel := doRequest(srv, httptest.NewRequest(http.MethodDelete, "/VIID/SubscribeNotifications/"+nid, nil))
+	if recDel.Code != http.StatusOK {
+		t.Fatalf("delete status = %d", recDel.Code)
+	}
+	recMiss := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/SubscribeNotifications/"+nid, nil))
+	if recMiss.Code != http.StatusNotFound {
+		t.Fatalf("get after delete = %d, want 404", recMiss.Code)
+	}
+}
+
+func TestDispositionNotification_GetAndDeleteByID(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	req := mustJSONRequest(t, http.MethodPost, "/VIID/DispositionNotifications",
+		map[string]any{"DispositionID": "D-Y", "Title": "alarm"})
+	rec := doRequest(srv, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create status = %d", rec.Code)
+	}
+	created := decodeResponse(t, rec.Body)
+	nid, _ := created["DispositionNotificationID"].(string)
+	if nid == "" {
+		t.Fatalf("DispositionNotificationID missing: %v", created)
+	}
+
+	recGet := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIID/DispositionNotifications/"+nid, nil))
+	if recGet.Code != http.StatusOK {
+		t.Fatalf("get status = %d", recGet.Code)
+	}
+	recDel := doRequest(srv, httptest.NewRequest(http.MethodDelete, "/VIID/DispositionNotifications/"+nid, nil))
+	if recDel.Code != http.StatusOK {
+		t.Fatalf("delete status = %d", recDel.Code)
+	}
+}
+
+func TestVIAS_TasksAndControls(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	recRoot := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIAS", nil))
+	if recRoot.Code != http.StatusOK {
+		t.Fatalf("/VIAS status = %d", recRoot.Code)
+	}
+
+	req := mustJSONRequest(t, http.MethodPost, "/VIAS/Tasks", map[string]any{
+		"TaskList": map[string]any{
+			"TaskObject": []any{map[string]any{"TaskName": "face-detect"}},
+		},
+	})
+	rec := doRequest(srv, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create task status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	created := decodeResponse(t, rec.Body)
+	ids, _ := created["TaskIDList"].([]any)
+	if len(ids) != 1 {
+		t.Fatalf("TaskIDList = %v", ids)
+	}
+	taskID, _ := ids[0].(string)
+
+	recGet := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIAS/Tasks/"+taskID, nil))
+	if recGet.Code != http.StatusOK {
+		t.Fatalf("get task status = %d", recGet.Code)
+	}
+
+	ctrl := mustJSONRequest(t, http.MethodPost, "/VIAS/TaskControls", map[string]any{
+		"TaskID": taskID, "Action": "Start",
+	})
+	if recCtrl := doRequest(srv, ctrl); recCtrl.Code != http.StatusOK {
+		t.Fatalf("control status = %d", recCtrl.Code)
+	}
+	st := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIAS/TaskStatuses/"+taskID, nil))
+	if st.Code != http.StatusOK {
+		t.Fatalf("status get = %d", st.Code)
+	}
+	stBody := decodeResponse(t, st.Body)
+	ts, _ := stBody["TaskStatus"].(map[string]any)
+	if ts["Status"] != "Running" {
+		t.Fatalf("Status = %v, want Running", ts["Status"])
+	}
+
+	img := mustJSONRequest(t, http.MethodPost, "/VIAS/Tasks/"+taskID+"/Images", map[string]any{
+		"ImageList": map[string]any{
+			"ImageObject": []any{map[string]any{"ImageID": "img-1", "Data": map[string]any{"fmt": "jpeg"}}},
+		},
+	})
+	if recImg := doRequest(srv, img); recImg.Code != http.StatusOK {
+		t.Fatalf("images upsert = %d", recImg.Code)
+	}
+	recImgGet := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIAS/Tasks/"+taskID+"/Images/img-1", nil))
+	if recImgGet.Code != http.StatusOK {
+		t.Fatalf("image get = %d", recImgGet.Code)
+	}
+
+	cap := doRequest(srv, httptest.NewRequest(http.MethodGet, "/VIAS/SystemCapability/AnalysisCapability", nil))
+	if cap.Code != http.StatusOK {
+		t.Fatalf("capability = %d", cap.Code)
+	}
+}

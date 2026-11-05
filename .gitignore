@@ -13,6 +13,8 @@
 .DS_Store
 .idea/
 .vscode/
+# 本地 OCR / 临时产物
+.tmp/
 
 # ── 本地工具目录（不纳入版本管理）──────────────────────────────
 # IDE 助手配置：agents / commands / skills / plans

@@ -45,19 +45,23 @@ func extractDeleteIDs(body map[string]any, listKey string) ([]string, bool) {
 // subscribeRepo 内存存储 Subscribe / SubscribeNotification / Disposition 记录。
 // 生产环境会替换为 sqlite；引导阶段用内存 map 简化接线。
 type subscribeRepo struct {
-	mu       sync.RWMutex
-	subs     map[string]map[string]any // SubscribeID -> raw payload
-	notifs   map[string][]map[string]any
-	disp     map[string]map[string]any
-	dispNotifs map[string][]map[string]any
+	mu            sync.RWMutex
+	subs          map[string]map[string]any   // SubscribeID -> raw payload
+	notifs        map[string][]map[string]any // SubscribeID -> notifications
+	notifByID     map[string]map[string]any   // NotificationID -> notification
+	disp          map[string]map[string]any
+	dispNotifs    map[string][]map[string]any
+	dispNotifByID map[string]map[string]any // DispositionNotificationID -> notification
 }
 
 func newSubscribeRepo() *subscribeRepo {
 	return &subscribeRepo{
-		subs:        map[string]map[string]any{},
-		notifs:      map[string][]map[string]any{},
-		disp:        map[string]map[string]any{},
-		dispNotifs:  map[string][]map[string]any{},
+		subs:          map[string]map[string]any{},
+		notifs:        map[string][]map[string]any{},
+		notifByID:     map[string]map[string]any{},
+		disp:          map[string]map[string]any{},
+		dispNotifs:    map[string][]map[string]any{},
+		dispNotifByID: map[string]map[string]any{},
 	}
 }
 
@@ -76,6 +80,37 @@ func (r *subscribeRepo) storeNotification(id string, payload map[string]any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.notifs[id] = append(r.notifs[id], payload)
+	if nid, _ := payload["NotificationID"].(string); nid != "" {
+		r.notifByID[nid] = payload
+	}
+}
+
+func (r *subscribeRepo) getNotification(nid string) (map[string]any, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	v, ok := r.notifByID[nid]
+	return v, ok
+}
+
+func (r *subscribeRepo) deleteNotification(nid string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	obj, ok := r.notifByID[nid]
+	if !ok {
+		return false
+	}
+	delete(r.notifByID, nid)
+	// 从所属 SubscribeID 桶中移除
+	for sid, arr := range r.notifs {
+		for i, n := range arr {
+			if id, _ := n["NotificationID"].(string); id == nid {
+				r.notifs[sid] = append(arr[:i], arr[i+1:]...)
+				_ = obj
+				return true
+			}
+		}
+	}
+	return true
 }
 
 func (r *subscribeRepo) list() []map[string]any {
@@ -106,7 +141,13 @@ func (r *subscribeRepo) clearNotifications(id string) {
 	defer r.mu.Unlock()
 	if id == "" || id == "*" {
 		r.notifs = map[string][]map[string]any{}
+		r.notifByID = map[string]map[string]any{}
 		return
+	}
+	for _, n := range r.notifs[id] {
+		if nid, _ := n["NotificationID"].(string); nid != "" {
+			delete(r.notifByID, nid)
+		}
 	}
 	delete(r.notifs, id)
 }
@@ -116,9 +157,40 @@ func (r *subscribeRepo) clearDispositionNotifications(id string) {
 	defer r.mu.Unlock()
 	if id == "" || id == "*" {
 		r.dispNotifs = map[string][]map[string]any{}
+		r.dispNotifByID = map[string]map[string]any{}
 		return
 	}
+	for _, n := range r.dispNotifs[id] {
+		if nid, _ := n["DispositionNotificationID"].(string); nid != "" {
+			delete(r.dispNotifByID, nid)
+		}
+	}
 	delete(r.dispNotifs, id)
+}
+
+func (r *subscribeRepo) getDispositionNotification(nid string) (map[string]any, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	v, ok := r.dispNotifByID[nid]
+	return v, ok
+}
+
+func (r *subscribeRepo) deleteDispositionNotification(nid string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.dispNotifByID[nid]; !ok {
+		return false
+	}
+	delete(r.dispNotifByID, nid)
+	for did, arr := range r.dispNotifs {
+		for i, n := range arr {
+			if id, _ := n["DispositionNotificationID"].(string); id == nid {
+				r.dispNotifs[did] = append(arr[:i], arr[i+1:]...)
+				return true
+			}
+		}
+	}
+	return true
 }
 
 func (r *subscribeRepo) storeDisposition(sc map[string]any) (string, bool) {
@@ -163,6 +235,8 @@ func (s *Server) registerCascadeRoutes() {
 	s.e.POST("/VIID/SubscribeNotifications", s.handleNotificationCreate)
 	s.e.DELETE("/VIID/SubscribeNotifications", s.handleNotificationDelete)
 	s.e.GET("/VIID/SubscribeNotifications", s.handleNotificationList)
+	s.e.GET("/VIID/SubscribeNotifications/:id", s.handleNotificationGet)
+	s.e.DELETE("/VIID/SubscribeNotifications/:id", s.handleNotificationDeleteByID)
 
 	// Dispositions (布控)
 	s.e.POST("/VIID/Dispositions", s.handleDispositionCreate)
@@ -176,6 +250,8 @@ func (s *Server) registerCascadeRoutes() {
 	s.e.POST("/VIID/DispositionNotifications", s.handleDispositionNotificationCreate)
 	s.e.DELETE("/VIID/DispositionNotifications", s.handleDispositionNotificationDelete)
 	s.e.GET("/VIID/DispositionNotifications", s.handleDispositionNotificationList)
+	s.e.GET("/VIID/DispositionNotifications/:id", s.handleDispositionNotificationGet)
+	s.e.DELETE("/VIID/DispositionNotifications/:id", s.handleDispositionNotificationDeleteByID)
 }
 
 // --- Subscribes ---
@@ -296,6 +372,7 @@ func (s *Server) handleNotificationCreate(c echo.Context) error {
 	}
 	notif := map[string]any{
 		"NotificationID": s.ids.UUID(),
+		"SubscribeID":    id,
 		"Title":          body["Title"],
 		"TriggerTime":    time.Now().UTC().Format(time.RFC3339),
 		"InfoIDs":        body["InfoIDs"],
@@ -446,16 +523,60 @@ func (s *Server) handleDispositionNotificationCreate(c echo.Context) error {
 	}
 	notif := map[string]any{
 		"DispositionNotificationID": s.ids.UUID(),
-		"TriggerTime":              time.Now().UTC().Format(time.RFC3339),
-		"Raw":                      body,
+		"DispositionID":             id,
+		"TriggerTime":               time.Now().UTC().Format(time.RFC3339),
+		"Raw":                       body,
 	}
 	s.subRepo.mu.Lock()
 	s.subRepo.dispNotifs[id] = append(s.subRepo.dispNotifs[id], notif)
+	if nid, _ := notif["DispositionNotificationID"].(string); nid != "" {
+		s.subRepo.dispNotifByID[nid] = notif
+	}
 	s.subRepo.mu.Unlock()
 	return c.JSON(http.StatusOK, map[string]any{
 		"ResponseStatus":            response.OK(id),
 		"DispositionNotificationID": notif["DispositionNotificationID"],
 	})
+}
+
+func (s *Server) handleNotificationGet(c echo.Context) error {
+	nid := c.Param("id")
+	obj, ok := s.subRepo.getNotification(nid)
+	if !ok {
+		return c.JSON(http.StatusNotFound, response.Error(nid, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{
+		"ResponseStatus":         response.OK(nid),
+		"SubscribeNotification":  obj,
+	})
+}
+
+func (s *Server) handleNotificationDeleteByID(c echo.Context) error {
+	nid := c.Param("id")
+	if !s.subRepo.deleteNotification(nid) {
+		return c.JSON(http.StatusNotFound, response.Error(nid, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(nid)})
+}
+
+func (s *Server) handleDispositionNotificationGet(c echo.Context) error {
+	nid := c.Param("id")
+	obj, ok := s.subRepo.getDispositionNotification(nid)
+	if !ok {
+		return c.JSON(http.StatusNotFound, response.Error(nid, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{
+		"ResponseStatus":             response.OK(nid),
+		"DispositionNotification":    obj,
+	})
+}
+
+func (s *Server) handleDispositionNotificationDeleteByID(c echo.Context) error {
+	nid := c.Param("id")
+	if !s.subRepo.deleteDispositionNotification(nid) {
+		return c.JSON(http.StatusNotFound, response.Error(nid, response.CodeNotFound, "not found"))
+	}
+	return c.JSON(http.StatusOK, map[string]any{"ResponseStatus": response.OK(nid)})
 }
 
 // handleDispositionNotificationDelete 处理 DELETE /VIID/DispositionNotifications。

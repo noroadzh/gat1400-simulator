@@ -78,6 +78,18 @@ User-Identify: <device-id>
 
 ## 四、路由清单
 
+### 4.0 根资源与联网服务
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/VIID` | 顶级资源目录（`ResourceURIList`） |
+| GET | `/VIID/System` | 系统属性（名称/版本/能力摘要） |
+| GET | `/VIID/VIIDServers` | 联网服务列表 |
+| POST/PUT | `/VIID/VIIDServers` | 批量 upsert（`VIIDServerList.VIIDServerObject[]`） |
+| GET | `/VIID/VIIDServers/:id` | 单条查询 |
+| PUT | `/VIID/VIIDServers/:id` | 单条更新 |
+| DELETE | `/VIID/VIIDServers/:id` | 单条删除 |
+
 ### 4.1 系统类（System）
 
 | 方法 | 路径 | 认证 |
@@ -267,8 +279,17 @@ Info 与 Data 与父对象**分表存储**：
 | GET  | `/VIID/Subscribes` | 订阅列表 | - |
 | DELETE | `/VIID/Subscribes/<id>` | 取消订阅 | 路径删除 |
 | POST | `/VIID/SubscribeNotifications` | 平台推送通知 | - |
+| GET | `/VIID/SubscribeNotifications` | 按 `subscribeId` 列通知 | query |
+| GET | `/VIID/SubscribeNotifications/<id>` | 按 NotificationID 查询 | 实例 |
+| DELETE | `/VIID/SubscribeNotifications/<id>` | 按 NotificationID 删除 | 实例 |
+| DELETE | `/VIID/SubscribeNotifications` | 按 `subscribeId` 清空 | query（`*`=全部） |
 | POST | `/VIID/Dispositions` | 订阅命中后的告警上报 | 创建 / Body 删除（双形态） |
 | DELETE | `/VIID/Dispositions/<id>` | 撤销告警 | 路径删除 |
+| POST | `/VIID/DispositionNotifications` | 布控命中通知推送 | - |
+| GET | `/VIID/DispositionNotifications` | 按 `dispositionId` 列通知 | query |
+| GET | `/VIID/DispositionNotifications/<id>` | 按 DispositionNotificationID 查询 | 实例 |
+| DELETE | `/VIID/DispositionNotifications/<id>` | 按 DispositionNotificationID 删除 | 实例 |
+| DELETE | `/VIID/DispositionNotifications` | 按 `dispositionId` 清空 | query |
 
 #### Subscribe 双形态删除说明
 
@@ -354,6 +375,31 @@ Info 与 Data 与父对象**分表存储**：
   }
 }
 ```
+
+### 4.5 分析系统（VIAS，表 14 子集）
+
+> 分析系统与视图库并列；BaseURL 为 `http://<host>:14000/VIAS/`。内存实现，供联调分析任务 / 能力查询。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/VIAS` | 资源 URI 目录 |
+| GET | `/VIAS/System` | 分析系统属性 |
+| POST | `/VIAS/System/Register` | Digest 注册（复用 VIID 逻辑） |
+| POST | `/VIAS/System/UnRegister` | Digest 注销 |
+| POST | `/VIAS/System/Keepalive` | 心跳 |
+| GET | `/VIAS/System/Time` | 校时 |
+| GET/POST | `/VIAS/Tasks` | 任务列表 / 创建 |
+| GET/PUT/DELETE | `/VIAS/Tasks/:id` | 任务实例 |
+| GET/POST | `/VIAS/Tasks/:id/{VideoSlices\|Images\|VideoLabels}` | 任务下资源 |
+| GET/DELETE | `/VIAS/Tasks/:id/{kind}/:rid` | 任务资源实例 |
+| GET/POST/DELETE | `/VIAS/Tasks/:id/{VideoSlices\|Images}/:rid/Data` | 二进制/Data 子资源 |
+| GET | `/VIAS/TaskStatuses` / `:id` | 任务状态 |
+| GET/POST | `/VIAS/TaskControls` | 启停控制（`Action`: Start/Pause/Stop） |
+| GET/POST | `/VIAS/AnalysisRules` | 分析规则 |
+| GET/DELETE | `/VIAS/AnalysisRules/:id` | 规则实例 |
+| GET | `/VIAS/SystemCapability/AnalysisCapability` | 分析能力 |
+| GET | `/VIAS/SystemCapability/EnhancementAndRestorationCapability` | 增强复原能力 |
+| GET | `/VIAS/SystemCapability/RetrievalCapability` | 检索能力 |
 
 ## 五、DeviceID 编码规则
 
