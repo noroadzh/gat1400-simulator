@@ -16,6 +16,7 @@ import (
 
 	"github.com/noroadzh/gat1400-simulator/internal/adapter/capture"
 	"github.com/noroadzh/gat1400-simulator/internal/domain/node"
+	"github.com/noroadzh/gat1400-simulator/internal/domain/resource"
 	"github.com/noroadzh/gat1400-simulator/internal/domain/scenario"
 )
 
@@ -191,6 +192,17 @@ func (e *Engine) run(ctx context.Context, h *runHandle) {
 			defer wg.Done()
 			e.paceResources(ctx, h.scenario, rs)
 		}(rs)
+	}
+
+	for _, as := range h.scenario.Actions {
+		if as.Rate <= 0 {
+			continue
+		}
+		wg.Add(1)
+		go func(as scenario.ActionSpec) {
+			defer wg.Done()
+			e.paceActions(ctx, h.scenario, as)
+		}(as)
 	}
 
 	// Subscribe goroutines: when an upstream node produces a resource of the
@@ -423,12 +435,98 @@ func (e *Engine) paceResources(ctx context.Context, s scenario.Scenario, rs scen
 	}
 }
 
+// paceActions 按 Rate 周期执行 ActionSpec（Catalog / 布控通知 / VIAS / 集合推送）。
+func (e *Engine) paceActions(ctx context.Context, s scenario.Scenario, as scenario.ActionSpec) {
+	if as.Rate <= 0 {
+		return
+	}
+	period := time.Second / time.Duration(as.Rate)
+	if period < 10*time.Millisecond {
+		period = 10 * time.Millisecond
+	}
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			e.emitAction(ctx, s, as)
+		}
+	}
+}
+
+// emitAction 根据 ActionSpec.Type 调用对应 OutboundDispatcher 方法。
+func (e *Engine) emitAction(ctx context.Context, s scenario.Scenario, as scenario.ActionSpec) {
+	if e.dispatcher == nil {
+		return
+	}
+	target, err := e.findOutboundTarget(ctx, s, as.NodeRef)
+	if err != nil {
+		e.log.Debug("action skipped", slog.String("reason", err.Error()))
+		return
+	}
+	var derr error
+	switch as.Type {
+	case "catalog-apes":
+		derr = e.dispatcher.DispatchCatalogUpsert(ctx, target, "APEs", map[string]any{
+			"APEList": map[string]any{"APEObject": []map[string]any{
+				{"APEID": target.ID, "Name": "stress-ape", "IsOnline": "1"},
+			}},
+		})
+	case "catalog-tollgates":
+		derr = e.dispatcher.DispatchCatalogUpsert(ctx, target, "Tollgates", map[string]any{
+			"TollgateList": map[string]any{"TollgateObject": []map[string]any{
+				{"TollgateID": target.ID, "Name": "stress-tg"},
+			}},
+		})
+	case "disposition-notification":
+		derr = e.dispatcher.DispatchDispositionNotification(ctx, target, map[string]any{
+			"DispositionID": "91000000001000000001",
+			"TriggerTime":   time.Now().UTC().Format(time.RFC3339),
+		})
+	case "vias-task":
+		derr = e.dispatcher.DispatchVIASTaskCreate(ctx, target, map[string]any{
+			"TaskID": "stress-task-" + target.ID,
+			"Title":  "stress",
+		})
+	case "collection-push":
+		kind := resource.KindFace
+		if as.Collection != "" {
+			for _, k := range resource.AllKinds {
+				if resource.CollectionOf(k) == as.Collection {
+					kind = k
+					break
+				}
+			}
+		}
+		coll := resource.CollectionOf(kind)
+		singular := string(kind)
+		derr = e.dispatcher.DispatchCollectionPush(ctx, target, coll, map[string]any{
+			singular + "List": map[string]any{
+				singular + "Object": []map[string]any{
+					{resource.IDOf(kind): target.ID, "Name": "stress"},
+				},
+			},
+		})
+	default:
+		e.log.Debug("unknown action type", slog.String("type", as.Type))
+		return
+	}
+	if derr != nil {
+		e.log.Debug("action dispatch",
+			slog.String("type", as.Type),
+			slog.String("err", derr.Error()),
+		)
+	}
+}
+
 // emit 按资源类型构造一个样本对象并投递到目标端点。
 // GA/T 1400.4 §5.2 Collection Push：通过 POST /VIID/<Kind>s 向上层注入
 // Faces/Videos/Vehicles/... 资源对象（factory.Build 构造，dispatcher 投递）。
 func (e *Engine) emit(ctx context.Context, s scenario.Scenario, rs scenario.ResourceSpec) {
 	payload := e.factory.Build(rs.Kind)
-	target, err := e.findTarget(ctx, s, rs.NodeRef)
+	target, err := e.findOutboundTarget(ctx, s, rs.NodeRef)
 	if err != nil {
 		e.log.Debug("emit skipped", slog.String("reason", err.Error()))
 		return
@@ -469,6 +567,19 @@ func (e *Engine) findTarget(ctx context.Context, s scenario.Scenario, ref string
 		}
 	}
 	return node.Node{}, fmt.Errorf("emit: unknown ref %q", ref)
+}
+
+// findOutboundTarget 解析 UAC 出站目标：优先 Upstream（真实平台 / 上级），
+// 否则回落到本节点 HTTPListen（回环自测）。
+func (e *Engine) findOutboundTarget(ctx context.Context, s scenario.Scenario, ref string) (node.Node, error) {
+	n, err := e.findTarget(ctx, s, ref)
+	if err != nil {
+		return node.Node{}, err
+	}
+	if n.Upstream != "" {
+		return node.Node{ID: n.ID, Name: n.Name, HTTPListen: n.Upstream, Upstream: n.Upstream}, nil
+	}
+	return n, nil
 }
 
 // dispatchNotifications fans out subscribe notifications to subscriber nodes on

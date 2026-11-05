@@ -1,0 +1,71 @@
+{
+  "description": "Collection list pagination — POST persons then GET with PageRecordNum/RecordStartNo and TotalNum",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/Persons",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "PersonList": {
+          "PersonObject": [
+            {
+              "PersonID": "41000000005030312101",
+              "PersonName": "分页甲"
+            },
+            {
+              "PersonID": "41000000005030312102",
+              "PersonName": "分页乙"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/Persons?PageRecordNum=1&RecordStartNo=1",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "TotalNum": 2,
+        "PersonList": {
+          "PersonObject": [
+            {
+              "PersonID": "41000000005030312101"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

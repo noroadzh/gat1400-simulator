@@ -119,6 +119,42 @@ func (c *Client) GetJSON(ctx context.Context, url, deviceID string) (map[string]
 	return decodeJSONMap(payload), status, nil
 }
 
+// PutJSON 发送 PUT 请求（JSON body），语义对齐 PostJSON：
+// application/VIID+JSON、Digest 401 至多重试一次、User-Identify。
+func (c *Client) PutJSON(ctx context.Context, url, deviceID string, body any) (map[string]any, int, error) {
+	raw, err := encodeJSON(body)
+	if err != nil {
+		return nil, 0, err
+	}
+	status, payload, err := c.do(ctx, http.MethodPut, url, deviceID, raw)
+	if err != nil {
+		return nil, status, err
+	}
+	return decodeJSONMap(payload), status, nil
+}
+
+// DeleteJSON 发送 DELETE 请求（无 body），复用同一 Digest 与头注入路径。
+func (c *Client) DeleteJSON(ctx context.Context, url, deviceID string) (map[string]any, int, error) {
+	status, payload, err := c.do(ctx, http.MethodDelete, url, deviceID, nil)
+	if err != nil {
+		return nil, status, err
+	}
+	return decodeJSONMap(payload), status, nil
+}
+
+// DeleteJSONWithBody 发送带 JSON body 的 DELETE（部分级联删除协议需要）。
+func (c *Client) DeleteJSONWithBody(ctx context.Context, url, deviceID string, body any) (map[string]any, int, error) {
+	raw, err := encodeJSON(body)
+	if err != nil {
+		return nil, 0, err
+	}
+	status, payload, err := c.do(ctx, http.MethodDelete, url, deviceID, raw)
+	if err != nil {
+		return nil, status, err
+	}
+	return decodeJSONMap(payload), status, nil
+}
+
 // do 内部助手：负责 Digest 握手与重试逻辑。
 // RFC 2617 §3：构造请求 → 发送 → 若 401 则解析挑战 → 重构 Authorization 头 → 重试一次。
 // 重试仅限一次，避免服务端故障下死循环。

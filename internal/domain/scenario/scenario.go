@@ -24,6 +24,7 @@ type Scenario struct {
 	Nodes       []NodeSpec     `json:"nodes"       yaml:"nodes"`
 	Subscriptions []SubscriptionSpec `json:"subscriptions" yaml:"subscriptions"`
 	Resources   []ResourceSpec `json:"resources"   yaml:"resources"`
+	Actions     []ActionSpec   `json:"actions"     yaml:"actions"`
 	Exceptions  ExceptionSpec  `json:"exceptions"  yaml:"exceptions"`
 	Schedule    ScheduleSpec   `json:"schedule"    yaml:"schedule"`
 }
@@ -56,6 +57,17 @@ type ResourceSpec struct {
 	Rate     int           `json:"rate"     yaml:"rate"`     // events per second
 	Burst    int           `json:"burst"    yaml:"burst"`    // optional initial burst
 	Seed     int64         `json:"seed"     yaml:"seed"`
+}
+
+// ActionSpec 描述压测/联调用的周期性出站动作（Catalog / DispositionNotification / VIAS 等）。
+//
+// Type 取值：catalog-apes | catalog-tollgates | disposition-notification | vias-task | collection-push
+// Collection 仅 collection-push 需要（如 Faces）；其余类型可忽略。
+type ActionSpec struct {
+	NodeRef    string `json:"node"       yaml:"node"`
+	Type       string `json:"type"       yaml:"type"`
+	Collection string `json:"collection" yaml:"collection"`
+	Rate       int    `json:"rate"       yaml:"rate"` // events per second；<=0 跳过
 }
 
 // ExceptionSpec 异常注入开关。默认全部为 0 / 关闭。

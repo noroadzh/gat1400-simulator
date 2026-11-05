@@ -143,6 +143,80 @@ func (d *OutboundDispatcher) DispatchDisposition(ctx context.Context, target nod
 	return err
 }
 
+// DispatchDispositionNotification POSTs to /VIID/DispositionNotifications.
+func (d *OutboundDispatcher) DispatchDispositionNotification(ctx context.Context, target node.Node, body map[string]any) error {
+	url, err := baseURL(target)
+	if err != nil {
+		return err
+	}
+	url += "/VIID/DispositionNotifications"
+	start := time.Now()
+	cctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
+	resp, status, err := d.client.PostJSON(cctx, url, target.ID, body)
+	dur := time.Since(start)
+	record(d, ctx, target, "POST", "/VIID/DispositionNotifications", url, body, resp, status, dur, err)
+	return err
+}
+
+// DispatchCatalogUpsert POSTs to /VIID/<collection>（APEs/APSs/Tollgates/Lanes/VIIDServers）。
+func (d *OutboundDispatcher) DispatchCatalogUpsert(ctx context.Context, target node.Node, collection string, body map[string]any) error {
+	switch collection {
+	case "APEs", "APSs", "Tollgates", "Lanes", "VIIDServers":
+	default:
+		return fmt.Errorf("dispatcher: unsupported catalog collection %q", collection)
+	}
+	url, err := baseURL(target)
+	if err != nil {
+		return err
+	}
+	path := "/VIID/" + collection
+	url += path
+	start := time.Now()
+	cctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
+	resp, status, err := d.client.PostJSON(cctx, url, target.ID, body)
+	dur := time.Since(start)
+	record(d, ctx, target, "POST", path, url, body, resp, status, dur, err)
+	return err
+}
+
+// DispatchCollectionPush POSTs to /VIID/<collection>。
+func (d *OutboundDispatcher) DispatchCollectionPush(ctx context.Context, target node.Node, collection string, body map[string]any) error {
+	if collection == "" {
+		return fmt.Errorf("dispatcher: empty collection")
+	}
+	url, err := baseURL(target)
+	if err != nil {
+		return err
+	}
+	path := "/VIID/" + collection
+	url += path
+	start := time.Now()
+	cctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
+	resp, status, err := d.client.PostJSON(cctx, url, target.ID, body)
+	dur := time.Since(start)
+	record(d, ctx, target, "POST", path, url, body, resp, status, dur, err)
+	return err
+}
+
+// DispatchVIASTaskCreate POSTs to /VIAS/Tasks。
+func (d *OutboundDispatcher) DispatchVIASTaskCreate(ctx context.Context, target node.Node, body map[string]any) error {
+	url, err := baseURL(target)
+	if err != nil {
+		return err
+	}
+	url += "/VIAS/Tasks"
+	start := time.Now()
+	cctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
+	resp, status, err := d.client.PostJSON(cctx, url, target.ID, body)
+	dur := time.Since(start)
+	record(d, ctx, target, "POST", "/VIAS/Tasks", url, body, resp, status, dur, err)
+	return err
+}
+
 // Dispatch POSTs payload to /VIID/<Collection> on the target.
 func (d *OutboundDispatcher) Dispatch(ctx context.Context, target node.Node, kind resource.Kind, payload map[string]any) error {
 	base, err := baseURL(target)

@@ -1,0 +1,91 @@
+{
+  "description": "DispositionNotification — POST push then GET by dispositionId",
+  "steps": [
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/Dispositions",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "DispositionList": [
+          {
+            "DispositionID": "91000000001000000088",
+            "DispositionCode": "010000",
+            "Title": "contract-disp"
+          }
+        ]
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "POST",
+      "path": "/VIID/DispositionNotifications",
+      "headers": {
+        "Content-Type": "application/VIID+JSON",
+        "User-Identify": "41000000005030312222"
+      },
+      "body": {
+        "DispositionID": "91000000001000000088",
+        "TriggerTime": "2026-01-01T00:00:00Z"
+      }
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        }
+      }
+    },
+    {
+      "direction": "outbound",
+      "method": "GET",
+      "path": "/VIID/DispositionNotifications?dispositionId=91000000001000000088",
+      "headers": {
+        "User-Identify": "41000000005030312222"
+      },
+      "body": null
+    },
+    {
+      "direction": "inbound",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/VIID+JSON; charset=UTF-8"
+      },
+      "body": {
+        "ResponseStatus": {
+          "StatusCode": 0,
+          "StatusString": "OK"
+        },
+        "DispositionNotificationList": {
+          "DispositionNotificationObject": [
+            {
+              "DispositionID": "91000000001000000088"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

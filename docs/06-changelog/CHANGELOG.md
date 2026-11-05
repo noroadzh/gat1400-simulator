@@ -6,6 +6,13 @@
 
 ## [未发布]
 
+### feat(uac,stress) — 双向全协议压测客户端与场景
+
+- `wire`：`PutJSON`/`DeleteJSON`；Cascade Disposition* 补全；新增 Catalog / Collection / VIAS 高层客户端
+- 场景：`OutboundDispatcher` 扩展；YAML `actions`；样例 `bidirectional-stress.yaml`（AutoStart=false）
+- e2e / 契约：回环全协议主路径；DispositionNotification 与分页列表黄金样本
+- 文档：`docs/05-operations/BIDIRECTIONAL-STRESS.md`
+
 ### chore(openspec) — 打通 plan↔OpenSpec 并归档 refine-test-coverage
 
 - `.cursor/rules/docs-and-openspec.mdc` / `.cursorrules`：非琐碎改动须 OpenSpec change + `.cursor/plan` 成对

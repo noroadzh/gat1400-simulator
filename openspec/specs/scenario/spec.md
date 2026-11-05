@@ -121,8 +121,12 @@
 - `DispatchSubscribe(ctx, target, body) error`
 - `DispatchSubscribeNotification(ctx, target, body) error`
 - `DispatchDisposition(ctx, target, body) error`
+- `DispatchDispositionNotification(ctx, target, body) error`
+- `DispatchCatalogUpsert(ctx, target, collection, body) error`（collection 为 APEs/APSs/Tollgates/Lanes/VIIDServers 之一）
+- `DispatchCollectionPush(ctx, target, collection, body) error`
+- `DispatchVIASTaskCreate(ctx, target, body) error`（可选启用；未接线时测试可跳过）
 
-所有方法均 MUST 复用既有的抓包记录逻辑（recorder 非空时记录）。所有方法 MUST 内部复用 `wire.Client.PostJSON`，享受 Digest 401 自动重试。
+所有方法均 MUST 复用既有的抓包记录逻辑（recorder 非空时记录）。写操作 MUST 内部复用 `wire.Client` 的 PostJSON/PutJSON/DeleteJSON（按动词），享受 Digest 401 自动重试。
 
 #### Scenario: DispatchRegister POST 到 /VIID/System/Register
 
@@ -141,6 +145,16 @@
 - **WHEN** `Engine.Stop` 触发 `DispatchUnregister`
 - **THEN** HTTP 请求 body MUST 包含 `UnRegisterObject.DeviceID = <target.ID>`
 - **AND** 失败 MUST 仅记录日志，不影响 Stop 流程。
+
+#### Scenario: DispatchCollectionPush POST 到集合路径
+
+- **WHEN** 触发 `DispatchCollectionPush` 且 collection=`Faces`
+- **THEN** HTTP 请求 MUST 指向目标上的 `/VIID/Faces`
+
+#### Scenario: DispatchDispositionNotification POST
+
+- **WHEN** 触发 `DispatchDispositionNotification`
+- **THEN** HTTP 请求 MUST 指向 `/VIID/DispositionNotifications`
 
 ### Requirement: scenario 适配层 MUST 在关键函数处添加协议节号注释
 

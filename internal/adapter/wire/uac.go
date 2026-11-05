@@ -234,7 +234,84 @@ func (c *Cascade) SubscribeNotificationPush(ctx context.Context, baseURL, device
 	return nil
 }
 
+// DispositionList 发送 GET /VIID/Dispositions 返回布控列表。
+// GA/T 1400.4 §5.4 Disposition List。
+func (c *Cascade) DispositionList(ctx context.Context, baseURL, deviceID string) ([]map[string]any, error) {
+	path := strings.TrimSuffix(baseURL, "/") + "/VIID/Dispositions"
+	resp, statusCode, err := c.c.GetJSON(ctx, path, deviceID)
+	if err != nil {
+		return nil, fmt.Errorf("DispositionList: %w", err)
+	}
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("DispositionList: unexpected status %d", statusCode)
+	}
+	return extractWrappedList(resp, "DispositionList", "DispositionObject"), nil
+}
+
+// DispositionDelete 发送 DELETE /VIID/Dispositions/:id。
+// GA/T 1400.4 §5.4 Disposition Delete。
+func (c *Cascade) DispositionDelete(ctx context.Context, baseURL, deviceID, dispositionID string) error {
+	path := strings.TrimSuffix(baseURL, "/") + "/VIID/Dispositions/" + dispositionID
+	_, statusCode, err := c.c.DeleteJSON(ctx, path, deviceID)
+	if err != nil {
+		return fmt.Errorf("DispositionDelete: %w", err)
+	}
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("DispositionDelete: unexpected status %d", statusCode)
+	}
+	return nil
+}
+
+// DispositionNotificationPush 推送布控命中通知。
+// GA/T 1400.4 §5.4 DispositionNotification Push。
+func (c *Cascade) DispositionNotificationPush(ctx context.Context, baseURL, deviceID string, body map[string]any) error {
+	path := strings.TrimSuffix(baseURL, "/") + "/VIID/DispositionNotifications"
+	_, statusCode, err := c.c.PostJSON(ctx, path, deviceID, body)
+	if err != nil {
+		return fmt.Errorf("DispositionNotificationPush: %w", err)
+	}
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("DispositionNotificationPush: unexpected status %d", statusCode)
+	}
+	return nil
+}
+
+// DispositionNotificationList 发送 GET /VIID/DispositionNotifications（可带 dispositionId）。
+func (c *Cascade) DispositionNotificationList(ctx context.Context, baseURL, deviceID, dispositionID string) ([]map[string]any, error) {
+	path := strings.TrimSuffix(baseURL, "/") + "/VIID/DispositionNotifications"
+	if dispositionID != "" {
+		path += "?dispositionId=" + dispositionID
+	}
+	resp, statusCode, err := c.c.GetJSON(ctx, path, deviceID)
+	if err != nil {
+		return nil, fmt.Errorf("DispositionNotificationList: %w", err)
+	}
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("DispositionNotificationList: unexpected status %d", statusCode)
+	}
+	return extractWrappedList(resp, "DispositionNotificationList", "DispositionNotificationObject"), nil
+}
+
 // --- 解析 helper ---
+
+// extractWrappedList 解析 {"ListKey":{"ObjectKey":[...]}} 形态响应。
+func extractWrappedList(resp map[string]any, listKey, objectKey string) []map[string]any {
+	wrap, ok := resp[listKey].(map[string]any)
+	if !ok {
+		return nil
+	}
+	arr, ok := wrap[objectKey].([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]map[string]any, 0, len(arr))
+	for _, item := range arr {
+		if m, ok := item.(map[string]any); ok {
+			result = append(result, m)
+		}
+	}
+	return result
+}
 
 // parseSubscribeIDFromBody 从请求体中提取首个 SubscribeID。
 // GA/T 1400 中 SubscribeID 由发起方（UAC）在请求体中生成，服务端成功响应即表示接受。

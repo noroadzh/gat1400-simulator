@@ -146,6 +146,70 @@ func TestDispatchDisposition_Path(t *testing.T) {
 	}
 }
 
+func TestDispatchDispositionNotification_Path(t *testing.T) {
+	var gotPath string
+	d, srv := newTestDispatcher(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ResponseStatus":{"StatusCode":0}}`))
+	})
+	target := node.Node{ID: "DEV00000000000000000001", HTTPListen: srv.URL[7:]}
+	if err := d.DispatchDispositionNotification(context.Background(), target, map[string]any{"DispositionID": "d1"}); err != nil {
+		t.Fatalf("DispatchDispositionNotification: %v", err)
+	}
+	if gotPath != "/VIID/DispositionNotifications" {
+		t.Fatalf("path = %q", gotPath)
+	}
+}
+
+func TestDispatchCatalogUpsert_Path(t *testing.T) {
+	var gotPath string
+	d, srv := newTestDispatcher(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ResponseStatus":{"StatusCode":0}}`))
+	})
+	target := node.Node{ID: "DEV00000000000000000001", HTTPListen: srv.URL[7:]}
+	if err := d.DispatchCatalogUpsert(context.Background(), target, "APEs", map[string]any{}); err != nil {
+		t.Fatalf("DispatchCatalogUpsert: %v", err)
+	}
+	if gotPath != "/VIID/APEs" {
+		t.Fatalf("path = %q", gotPath)
+	}
+}
+
+func TestDispatchCollectionPush_Path(t *testing.T) {
+	var gotPath string
+	d, srv := newTestDispatcher(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ResponseStatus":{"StatusCode":0}}`))
+	})
+	target := node.Node{ID: "DEV00000000000000000001", HTTPListen: srv.URL[7:]}
+	if err := d.DispatchCollectionPush(context.Background(), target, "Faces", map[string]any{}); err != nil {
+		t.Fatalf("DispatchCollectionPush: %v", err)
+	}
+	if gotPath != "/VIID/Faces" {
+		t.Fatalf("path = %q", gotPath)
+	}
+}
+
+func TestDispatchVIASTaskCreate_Path(t *testing.T) {
+	var gotPath string
+	d, srv := newTestDispatcher(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ResponseStatus":{"StatusCode":0}}`))
+	})
+	target := node.Node{ID: "DEV00000000000000000001", HTTPListen: srv.URL[7:]}
+	if err := d.DispatchVIASTaskCreate(context.Background(), target, map[string]any{"TaskID": "t1"}); err != nil {
+		t.Fatalf("DispatchVIASTaskCreate: %v", err)
+	}
+	if gotPath != "/VIAS/Tasks" {
+		t.Fatalf("path = %q", gotPath)
+	}
+}
+
 // TestDispatch_NilRecorderSafe verifies record() does not panic when recorder is nil.
 func TestDispatch_NilRecorderSafe(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

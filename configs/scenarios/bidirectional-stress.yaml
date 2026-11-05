@@ -1,0 +1,48 @@
+# 双向全协议压测样例（回环 / 外场改 upstream）。
+# AutoStart=false：不会在进程启动时自动对外加压。
+# 外场：把 device 的 upstream 改为真实平台 baseURL（如 http://10.x.x.x:8080）。
+
+id: bidirectional-stress
+name: "Bidirectional full-protocol stress (loopback sample)"
+description: "UAC 出站：Register/资源推送/Catalog/布控通知；UAS 入站由本机 :14000 或节点 listen 承接"
+tags: [stress, bidirectional, demo]
+
+nodes:
+  - ref: device-uac
+    role: device
+    listen: ":14141"
+    # 指向本机协议端或真实平台；占位 localhost
+    upstream: "http://127.0.0.1:14000"
+    capabilities: [system, collection, capture-agent, cascade]
+  - ref: platform-uas
+    role: platform-large
+    listen: ":14142"
+    capabilities: [system, collection, data-service, cascade]
+
+resources:
+  - node: device-uac
+    kind: Face
+    rate: 2
+    burst: 1
+
+actions:
+  - node: device-uac
+    type: catalog-apes
+    rate: 1
+  - node: device-uac
+    type: disposition-notification
+    rate: 1
+  - node: device-uac
+    type: collection-push
+    collection: Faces
+    rate: 1
+
+exceptions:
+  registerDropRate: 0
+  keepaliveJitter: 0s
+  subscribeRejectRate: 0
+  latencySpike: 0s
+
+schedule:
+  autoStart: false
+  duration: 0s

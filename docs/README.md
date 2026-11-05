@@ -76,6 +76,7 @@ docs/
 | 文档 | 读者 | 内容 |
 |------|------|------|
 | [OPERATIONS.md](./05-operations/OPERATIONS.md) | 运维 / SRE | Docker Compose、TLS、systemd、监控、备份、升级、容量 |
+| [BIDIRECTIONAL-STRESS.md](./05-operations/BIDIRECTIONAL-STRESS.md) | 联调 / 压测 | 双向全协议压测拓扑、场景 YAML、验收清单 |
 
 ---
 
