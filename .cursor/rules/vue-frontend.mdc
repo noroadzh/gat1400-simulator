@@ -1,0 +1,28 @@
+---
+description: Vue 3 前端 SPA 约定（web/）
+globs: "web/**/*.{vue,ts,css}"
+alwaysApply: false
+---
+
+# Vue 前端约定
+
+栈：Vue 3.4 + `<script setup>` + TypeScript strict + Element Plus 2 + Vite 5。
+
+## 结构
+
+- `web/src/views/`：7 视图（Dashboard/Nodes/Scenarios/Resources/Subscriptions/Captures/Config）
+- `web/src/components/`：可复用组件
+- `web/src/api/control.ts`：BFF fetch 封装（唯一 HTTP 出口）
+- `web/src/api/ws.ts`：WebSocket 自动重连
+- `web/src/api/resources-meta.ts`：12 Kind 中文元数据
+
+## 规范
+
+- 只用 Composition API + `<script setup>`；禁止 Options API
+- 禁止 `any`；接口与 BFF 响应对齐
+- 所有控制面调用走 `/api/control/*`；开发由 Vite 代理到 `:14080`
+- 资源页 URI 必须是 `/VIID/<Collection>`，勿写错误的 `/VIAS/...`
+- 异步 UI 处理 loading / error；改动保持与现有玻璃拟态主题一致
+- 不引入 Pinia/Vuex，除非现有需求明确要求全局状态
+
+验证：`cd web && npx vue-tsc --noEmit && npm run build`

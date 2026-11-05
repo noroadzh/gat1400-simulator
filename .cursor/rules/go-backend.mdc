@@ -1,0 +1,37 @@
+---
+description: Go 后端分层、错误处理与适配器约定
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go 后端约定
+
+## 分层
+
+| 层 | 路径 | 可依赖 |
+|----|------|--------|
+| domain | `internal/domain/*` | 仅标准库 |
+| app | `internal/app/{application,config,ports,logging}` | domain + ports |
+| adapter | `internal/adapter/*` | domain、app、第三方 |
+| ui/BFF | `internal/ui` | app、ports、domain |
+| cmd | `cmd/gat1400-sim` | 组装上述层 |
+
+禁止 adapter ↔ domain 反向依赖；禁止 domain 引入 Echo/sqlite。
+
+## 编码
+
+- 显式错误处理；`context.Context` 贯穿取消/超时
+- 接口放 `internal/app/ports/`，小而精，测试用 mock port
+- 日志用 `log/slog`（结构化字段），勿用 `fmt.Println` 打生产日志
+- 熵源用 `crypto/rand`（nonce/UUID）；禁止 `time.Now` 当随机源
+- SQLite 仅用 `modernc.org/sqlite`（无 CGO）
+- 并发：注意 goroutine 泄漏；BFF 缓存击穿用 `singleflight`
+
+## 包职责速查
+
+- `adapter/httpapi`：协议服务端（Digest / User-Identify / Capture）
+- `adapter/wire`：UAC 客户端（Digest 自动重试）
+- `adapter/scenario`：YAML 场景引擎
+- `adapter/storage`：captures / nonces 持久化
+
+改完跑：`go test -race ./internal/...`；涉及协议再跑 `./test/contract/...`。

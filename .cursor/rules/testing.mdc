@@ -1,0 +1,35 @@
+---
+description: 测试组织、黄金样本与 e2e 约束
+globs: "**/*_test.go,test/**/*"
+alwaysApply: false
+---
+
+# 测试约定
+
+## 分层
+
+| 位置 | 类型 | 要求 |
+|------|------|------|
+| `internal/**/*_test.go` | 单元/集成 | race 安全；ports 用 mock |
+| `test/contract/` | 黄金样本 | JSON 线级回放，校验协议 |
+| `test/e2e/` | e2e | **真实 TCP socket**，禁止 mock HTTP 层 |
+
+## 命令
+
+```bash
+make test                          # go test -race ./...
+go test -v ./test/contract/...
+go test -tags=e2e -v ./test/e2e/...
+go test -coverprofile=cover.out ./internal/...
+```
+
+CI 期望 `internal/` 高覆盖率；lint：`golangci-lint run ./...`。
+
+## 黄金样本
+
+路径：`test/contract/golden/*.json`。改协议路由/信封后必须同步样本。
+`body_shape` 为部分匹配；只断言关键字段。
+
+## Mock
+
+只在 port 接缝 mock（`internal/app/ports/`）。e2e 用 `net.Listen("tcp","127.0.0.1:0")` + 真实 `httpapi` + `wire.Client`。

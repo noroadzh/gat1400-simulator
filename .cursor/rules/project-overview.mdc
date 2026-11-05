@@ -1,0 +1,50 @@
+---
+description: GA/T 1400 模拟器项目总览、技术栈、端口与目录纪律（始终生效）
+alwaysApply: true
+---
+
+# GA/T 1400 协议模拟器
+
+单进程内同时扮演 **设备（UAC）** 与 **平台（UAS）**，实现 GA/T 1400.4 REST。中文文档优先。
+
+## 技术栈
+
+- 后端：Go 1.25 / Echo / modernc.org/sqlite（无 CGO）/ slog
+- BFF：`internal/ui`，`:14080`，`/api/control/*` + `/ws/events`
+- 协议端：`internal/adapter/httpapi`，`:14000`，`/VIID/*`，`application/VIID+JSON`
+- 前端：Vue 3.4 + `<script setup>` + Element Plus 2 + Vite 5 + TS 5（`web/`）
+- 容器：backend distroless；frontend nginx:alpine（反代 `/api` `/ws`）
+
+## 端口
+
+| 端口 | 用途 |
+|------|------|
+| `:8080` | Docker 前端 SPA |
+| `:5173` | `npm run dev` |
+| `:14080` | BFF |
+| `:14000` | 协议端 |
+
+## 目录与依赖方向（强制）
+
+```
+cmd/ → internal/app → internal/domain
+                 ↘ internal/app/ports ← internal/adapter
+internal/domain 仅依赖标准库
+openspec/ 本地变更管理（gitignored）；data/ 运行时 SQLite
+```
+
+## 常用命令
+
+```bash
+make build && make test && make e2e
+./bin/gat1400-sim --config configs/default.yaml
+cd web && npm run dev   # 代理 /api → :14080
+docker-compose up -d    # :8080
+```
+
+## Agent 行为
+
+- 改协议字段/路径前先对照 `docs/PROTOCOL.md` 与黄金样本 `test/contract/golden/`
+- 不擅自扩大范围；不 invent 非标准 Content-Type / StatusCode
+- 密钥不入库；默认 Digest `admin/admin` 仅本地开发
+- 详细规范见同目录其它 rules；文档索引见 `docs/README.md`

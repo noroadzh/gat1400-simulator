@@ -1,0 +1,35 @@
+---
+description: GA/T 1400.4 协议实现约束（VIID、Digest、资源 Kind）
+globs: "internal/adapter/httpapi/**,internal/adapter/wire/**,internal/domain/resource/**,internal/domain/response/**,test/contract/**"
+alwaysApply: false
+---
+
+# GA/T 1400.4 协议约束
+
+权威细节：`docs/PROTOCOL.md`；国标原文：`docs/standards/` 第 4 部分 PDF。
+
+## 硬性约定
+
+- Content-Type：`application/VIID+JSON`
+- Digest：RFC 2617 `qop=auth`；realm 默认 `com.gat1400.simulator`
+- 仅 Register / UnRegister 强制 Digest；其它接口靠 `User-Identify: <DeviceID>`
+- Nonce：`crypto/rand`、32 位 hex、单次消费（`NonceStore.Consume`）
+- 响应信封：`ResponseStatus{StatusCode,StatusString}`；0=OK,1=INVALID,2=NOTFOUND,3=UNAUTHORIZED,4=SERVER_ERROR
+
+## 12 Kind
+
+`Person/Face/MotorVehicle/NonMotorVehicle/Thing/Scene/VideoSlice/Image/File/Case/VideoLabel/AnalysisRule`
+
+新增 Kind 必须同步：`Kind` 常量、`CollectionOf`、`IDOf`、`AllKinds`；路由由集合注册自动生效。
+
+批量写入信封：`{Kind}List.{Kind}Object[]`；缺主键对象静默忽略。
+
+## Cascade 双形态
+
+`POST /VIID/Subscribes|Dispositions`：含 `*IDList` / `DeleteOperate.*IDList` → 删除优先；含 `*List` → 创建。路径 `DELETE` 与 body 删除等价。
+
+## DeviceID
+
+20 位：`8(区划)+2(行业)+2(类型)+2(子类型)+6(序号)`，用 `internal/domain/ids.Generator`。
+
+改协议行为必须更新黄金样本与 `docs/PROTOCOL.md`。

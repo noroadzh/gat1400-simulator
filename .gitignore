@@ -8,6 +8,8 @@
 *.sqlite-journal
 *.har
 *.jsonl
+# 协议规范文档（体积大，避免进 git 历史）
+*.pdf
 .DS_Store
 .idea/
 .vscode/

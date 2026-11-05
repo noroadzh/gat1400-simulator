@@ -62,13 +62,18 @@ gat1400-simulator/
 │   ├── captures.db           # 抓包数据
 │   └── nonces.db             # Digest nonce 表
 │
-├── docs/                     # 项目文档（中文）
+├── docs/                     # 项目文档（中文）— 见 docs/README.md 索引
+│   ├── README.md             # 文档索引与维护约定
 │   ├── ARCHITECTURE.md       # 架构说明：组件拓扑、数据流、分层纪律
-│   ├── PROTOCOL.md           # 协议参考：12 Kind 资源对象、System、Catalog、Cascade、错误码
+│   ├── PROTOCOL.md           # 协议参考：12 Kind、System、Catalog、Cascade、错误码
 │   ├── USER_GUIDE.md         # 用户指南：配置、场景 YAML、Web BFF API
 │   ├── OPERATIONS.md         # 运维指南：本地部署、Docker、nginx、TLS
 │   ├── TESTING.md            # 测试指南：黄金样本、e2e、覆盖率
-│   └── CHANGELOG.md          # 变更日志
+│   ├── CHANGELOG.md          # 变更日志
+│   └── standards/            # 国标 PDF 原文（GA/T 1400.1–.4，只读参考）
+│
+├── .cursor/rules/            # Cursor Agent 规则（*.mdc）
+├── .cursorrules              # 根级 Cursor 规则摘要（兼容）
 │
 ├── openspec/                 # 变更管理（gitignored，仅本地维护）
 │   ├── specs/                # 主规格（11 个 capability）

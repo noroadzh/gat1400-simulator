@@ -1,0 +1,67 @@
+# GA/T 1400 协议模拟器 — Cursor Rules（根摘要）
+
+> 完整、按文件匹配的规则在 `.cursor/rules/*.mdc`。本文件为全局摘要，供兼容旧版 Cursor / 其它工具读取。
+
+## 项目是什么
+
+Go + Vue 3 全栈模拟器：单进程同时扮演 GA/T 1400.4 的**设备（UAC）**与**平台（UAS）**，用于协议联调、压测、拓扑验证。
+
+## 技术栈速查
+
+- Go 1.25 / Echo / modernc.org/sqlite（无 CGO）/ slog
+- 协议端 `:14000` `/VIID/*`，`application/VIID+JSON`，Digest（RFC 2617 qop=auth）
+- BFF `:14080` `/api/control/*` + `/ws/events`
+- 前端 `web/`：Vue 3.4 + script setup + Element Plus + Vite + TS
+- Docker：backend distroless + frontend nginx（`:8080` 反代 `/api` `/ws`）
+
+## 分层（强制单向）
+
+```
+cmd → app → domain
+       ↘ ports ← adapter
+domain 仅标准库；禁止跨层反向依赖
+```
+
+## 关键路径
+
+| 路径 | 职责 |
+|------|------|
+| `internal/adapter/httpapi` | 协议服务端 |
+| `internal/adapter/wire` | UAC 客户端 |
+| `internal/adapter/scenario` | YAML 场景引擎 |
+| `internal/ui` | Web BFF |
+| `web/src` | Vue SPA |
+| `configs/` | default.yaml + scenarios/ |
+| `docs/` | 中文文档；`docs/standards/` 国标 PDF |
+| `test/contract` | 黄金样本 |
+| `test/e2e` | 真实 TCP e2e |
+| `openspec/` | 本地变更管理（gitignored） |
+
+## 硬约束
+
+1. 协议字段/路径以 `docs/PROTOCOL.md` + `test/contract/golden/` 为准
+2. Nonce / UUID 用 `crypto/rand`，禁止 `time.Now` 当熵源
+3. 12 Kind 增删须同步 `Kind`/`CollectionOf`/`IDOf`/`AllKinds`
+4. Cascade POST 删除优先于创建（`*IDList` / `DeleteOperate`）
+5. e2e 禁止 mock HTTP 层；必须真实 socket
+6. 前端控制面只走 `/api/control/*`；资源 URI 用 `/VIID/<Collection>`
+7. 中文文档优先；执行 plan 写入 `.cursor/plan/`，勿散落仓库根
+8. 不提交密钥、`data/*.db`、`web/node_modules`、`openspec/`（若已 gitignore）
+
+## 常用命令
+
+```bash
+make build && make test && make e2e
+./bin/gat1400-sim --config configs/default.yaml
+cd web && npm run dev
+docker-compose up -d
+```
+
+## 规则文件索引
+
+- `.cursor/rules/project-overview.mdc` — 始终生效
+- `.cursor/rules/go-backend.mdc` — `**/*.go`
+- `.cursor/rules/gat1400-protocol.mdc` — 协议相关包
+- `.cursor/rules/vue-frontend.mdc` — `web/**`
+- `.cursor/rules/testing.mdc` — 测试
+- `.cursor/rules/docs-and-openspec.mdc` — 文档 / OpenSpec

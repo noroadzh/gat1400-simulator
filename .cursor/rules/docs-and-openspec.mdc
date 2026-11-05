@@ -1,0 +1,30 @@
+---
+description: 文档与 OpenSpec 变更管理约定
+globs: "docs/**/*.md,openspec/**/*.md,openspec/**/*.yaml"
+alwaysApply: false
+---
+
+# 文档与 OpenSpec
+
+## docs/ 结构
+
+| 文件 | 用途 |
+|------|------|
+| `docs/README.md` | 文档索引 |
+| `ARCHITECTURE.md` | 拓扑、分层、数据流 |
+| `PROTOCOL.md` | VIID 路由与字段（实现真相源） |
+| `USER_GUIDE.md` | 配置、场景 YAML、BFF API |
+| `OPERATIONS.md` | 部署、监控、备份 |
+| `TESTING.md` | 测试方法 |
+| `CHANGELOG.md` | 用户可读变更 |
+| `standards/` | 国标 PDF（只读参考，勿改） |
+
+协议行为变更：先改代码与测试，再更新 `PROTOCOL.md` / `CHANGELOG.md`。
+执行 plan 写到 `.cursor/plan/`，不要写进 `docs/` 或仓库根。
+
+## OpenSpec（本地）
+
+- `openspec/specs/`：主规格；`openspec/changes/`：在途变更
+- 动手前阅读当前 change 的 proposal / design / tasks
+- 以 Spec Requirement/Scenario 为验收标准；冲突时改 OpenSpec 再写代码
+- 只做 tasks 中未完成项；结束时列出完成的 task 编号

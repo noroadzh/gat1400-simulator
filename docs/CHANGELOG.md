@@ -6,6 +6,11 @@
 
 ## [未发布]
 
+### chore(docs,cursor) — 文档整理与 Cursor Rules
+
+- `docs/` 增加索引 [README.md](./README.md)；国标 PDF 迁入 `docs/standards/`
+- 新增 `.cursor/rules/*.mdc`（项目概览 / Go / 协议 / Vue / 测试 / 文档）与根 `.cursorrules`
+
 ### feat(bff,web) — 资源对象 API 端到端打通（路线图 #17）
 
 - BFF `/api/control/resources/*` 7 个端点：枚举 12 Kind、`list` / `list/:id` / `POST list` / `PUT list/:id` / `DELETE list/:id` / `info`，全部透传协议端 `/VIID/<Collection>`
